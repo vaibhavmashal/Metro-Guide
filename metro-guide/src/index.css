@@ -1,18 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "maplibre-gl/dist/maplibre-gl.css";
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* =====================================================
    CSS Variables
    ===================================================== */
 :root {
-  --glass-bg: rgba(12, 12, 28, 0.88);
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-blur: 24px;
+  --glass-bg: rgba(22, 24, 40, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --glass-blur: 32px;
   --purple: #a855f7;
   --cyan: #06b6d4;
   --pink: #ec4899;
+  --panel-bg: rgba(28, 30, 48, 0.78);
+  --panel-border: rgba(255, 255, 255, 0.10);
+  --panel-blur: 36px;
+  --search-focus-border: rgba(138, 92, 246, 0.75);
+  --search-focus-glow: rgba(138, 92, 246, 0.18);
 }
 
 /* =====================================================
@@ -43,13 +47,15 @@ html, body, #root {
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
+  margin: 8px 0;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.14);
   border-radius: 10px;
+  transition: background 0.2s;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(168, 85, 247, 0.45);
 }
 
 /* =====================================================
@@ -70,11 +76,152 @@ html, body, #root {
    Station Panel (Right Sidebar Floating Card)
    ===================================================== */
 .station-panel {
-  background: rgba(18, 20, 32, 0.94);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--panel-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--panel-blur)) saturate(180%);
+  border: 1px solid var(--panel-border);
+  border-right: none;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.55),
+    0 4px 16px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 1px 0 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Station Panel Search Input */
+.station-search-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.10);
+  border-radius: 12px;
+  color: #e2e8f0;
+  font-size: 14px;
+  font-family: 'Inter', system-ui, sans-serif;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.station-search-input::placeholder {
+  color: rgba(148, 163, 184, 0.7);
+}
+
+.station-search-input:focus {
+  border-color: var(--search-focus-border);
+  background: rgba(138, 92, 246, 0.06);
+  box-shadow:
+    0 0 0 3px var(--search-focus-glow),
+    inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Station list item */
+.station-item {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.station-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateX(2px);
+}
+
+.station-item.selected {
+  background: rgba(168, 85, 247, 0.18);
+  border-color: rgba(168, 85, 247, 0.40);
+  box-shadow: 0 2px 12px rgba(168, 85, 247, 0.12);
+}
+
+/* Station dot icon */
+.station-dot {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2.5px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+}
+
+.station-dot .dot-inner {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.station-item:hover .station-dot {
+  transform: scale(1.15);
+}
+
+/* Line filter badge / button */
+.line-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 0;
+  transition: opacity 0.15s ease;
+}
+
+.line-filter-btn .line-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.line-filter-btn span {
+  font-size: 12px;
+  color: #cbd5e1;
+  font-weight: 500;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Panel header count badge */
+.count-badge {
+  background: rgba(255, 255, 255, 0.10);
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-family: 'Inter', system-ui, sans-serif;
+  letter-spacing: 0.02em;
+}
+
+/* Collapse button */
+.collapse-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  color: #94a3b8;
+}
+
+.collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #e2e8f0;
 }
 
 
@@ -239,4 +386,120 @@ input[type="range"]::-moz-range-progress {
   background: var(--purple);
   height: 4px;
   border-radius: 2px;
+}
+
+/* =====================================================
+   Mobile Touch Targets
+   ===================================================== */
+@media (max-width: 639px) {
+  button, label, a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Ensure all interactive elements meet 44px touch target */
+  .fab-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Compact glass-card on mobile */
+  .glass-card {
+    border-radius: 12px;
+  }
+}
+
+/* =====================================================
+   Station Panel — Mobile Bottom Sheet
+   ===================================================== */
+@media (max-width: 639px) {
+  .station-panel {
+    border-right: 1px solid rgba(255, 255, 255, 0.10) !important;
+    border-radius: 20px 20px 0 0 !important;
+    border-bottom: none;
+  }
+
+  .station-panel-mobile-handle {
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.20);
+    margin: 0 auto 12px;
+    flex-shrink: 0;
+  }
+}
+
+/* =====================================================
+   Bottom Sheet Shared Utility
+   ===================================================== */
+.bottom-sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.20);
+  margin: 8px auto 0;
+  flex-shrink: 0;
+  cursor: grab;
+}
+
+/* =====================================================
+   Mobile Nav Bar (bottom tab strip)
+   ===================================================== */
+.mobile-nav-bar {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  .mobile-nav-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 25;
+    height: 60px;
+    background: rgba(22, 24, 40, 0.96);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 8px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .mobile-nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: rgba(148, 163, 184, 0.7);
+    font-size: 10px;
+    font-weight: 600;
+    font-family: 'Inter', system-ui, sans-serif;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: color 0.15s, background 0.15s;
+    min-width: 60px;
+  }
+
+  .mobile-nav-btn.active {
+    color: #a855f7;
+    background: rgba(168, 85, 247, 0.10);
+  }
+}
+
+/* =====================================================
+   Responsive Overrides — Tablet (640–1023px)
+   ===================================================== */
+@media (min-width: 640px) and (max-width: 1023px) {
+  /* Narrower station panel on tablet */
+  .station-panel-tablet {
+    width: 280px !important;
+  }
 }

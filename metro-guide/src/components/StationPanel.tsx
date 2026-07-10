@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ChevronRight } from 'lucide-react';
+import { Search, ChevronRight, ChevronDown } from 'lucide-react';
 import { STATIONS, LINES, LINE_COLORS, type MetroLine } from '../data/metroData';
 
 interface StationPanelProps {
@@ -8,46 +8,70 @@ interface StationPanelProps {
   selectedStation: string | null;
 }
 
+const isMobile = () => window.innerWidth < 640;
+
 export default function StationPanel({ onStationSelect, selectedStation }: StationPanelProps) {
-  const [isOpen, setIsOpen] = useState(true);
-  const [search, setSearch] = useState('');
+  const [isOpen, setIsOpen]     = useState(true);
+  const [search, setSearch]     = useState('');
   const [activeFilter, setActiveFilter] = useState<MetroLine | 'all'>('all');
+  const [mobile, setMobile]     = useState(isMobile);
+
+  useEffect(() => {
+    const handler = () => setMobile(isMobile());
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
   const allStations = useMemo(() => {
     const stationMap = new Map<string, { id: string; name: string; line: MetroLine; lineName: string }>();
-
     Object.values(STATIONS).forEach(station => {
       const displayName = station.name;
       if (!stationMap.has(displayName)) {
         let lineName = 'Purple Line';
-        if (station.line === 'aqua') lineName = 'Aqua Line';
+        if (station.line === 'aqua')   lineName = 'Aqua Line';
         else if (station.line === 'line3') lineName = 'Line 3';
-
-        stationMap.set(displayName, {
-          id: station.id,
-          name: displayName,
-          line: station.line,
-          lineName,
-        });
+        stationMap.set(displayName, { id: station.id, name: displayName, line: station.line, lineName });
       }
     });
-
     return Array.from(stationMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, []);
 
-  const filteredStations = useMemo(() => {
-    return allStations.filter(station => {
+  const filteredStations = useMemo(() =>
+    allStations.filter(station => {
       const matchesSearch = station.name.toLowerCase().includes(search.toLowerCase());
       const matchesFilter = activeFilter === 'all' || station.line === activeFilter;
       return matchesSearch && matchesFilter;
-    });
-  }, [allStations, search, activeFilter]);
+    }),
+    [allStations, search, activeFilter]
+  );
+
+  /* ── Mobile bottom-sheet positioning ── */
+  const mobileStyle: React.CSSProperties = {
+    position: 'fixed',
+    bottom: 60,           /* above mobile nav bar */
+    left: 0,
+    right: 0,
+    height: '65vh',
+    zIndex: 20,
+  };
+
+  /* ── Desktop sidebar positioning ── */
+  const desktopStyle: React.CSSProperties = {
+    position: 'fixed',
+    top: 16,
+    right: 16,
+    height: 'calc(100vh - 136px)',   /* leaves ~120px at bottom for map controls */
+    width: '320px',
+    zIndex: 20,
+  };
+
+  const panelStyle = mobile ? mobileStyle : desktopStyle;
 
   return (
     <>
-      {/* Collapsed toggle button */}
+      {/* Desktop-only collapsed toggle button */}
       <AnimatePresence>
-        {!isOpen && (
+        {!isOpen && !mobile && (
           <motion.button
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -61,156 +85,162 @@ export default function StationPanel({ onStationSelect, selectedStation }: Stati
         )}
       </AnimatePresence>
 
-      {/* Floating Station Sidebar Card */}
+      {/* Panel */}
       <AnimatePresence>
-        {isOpen && (
+        {(isOpen || mobile) && (
           <motion.div
-            initial={{ x: 360, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 360, opacity: 0 }}
-            transition={{ type: 'spring', damping: 26, stiffness: 220 }}
-            className="fixed top-4 right-4 h-[calc(100vh-32px)] w-[336px] z-20 station-panel rounded-2xl flex flex-col overflow-hidden shadow-2xl"
+            initial={mobile
+              ? { y: '100%', opacity: 0 }
+              : { x: 360, opacity: 0 }
+            }
+            animate={mobile
+              ? { y: 0, opacity: 1 }
+              : { x: 0, opacity: 1 }
+            }
+            exit={mobile
+              ? { y: '100%', opacity: 0 }
+              : { x: 360, opacity: 0 }
+            }
+            transition={{ type: 'spring', damping: 28, stiffness: 240 }}
+            className="station-panel"
+            style={{
+              ...panelStyle,
+              borderRadius: mobile ? '20px 20px 0 0' : '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
           >
+            {/* Mobile drag handle */}
+            {mobile && <div className="bottom-sheet-handle" style={{ marginTop: '10px' }} />}
+
             {/* Header section */}
-            <div className="p-5 pb-3">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2.5">
-                  <h2 className="text-white text-[15px] font-bold tracking-wider uppercase">
+            <div style={{ padding: mobile ? '12px 16px 10px' : '20px 20px 12px 20px' }}>
+              {/* Title row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <h2 style={{
+                    color: '#f1f5f9',
+                    fontSize: mobile ? '12px' : '13px',
+                    fontWeight: 700,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    margin: 0,
+                  }}>
                     STATIONS
                   </h2>
-                  <span className="bg-white/10 text-gray-300 text-[12px] font-medium px-2.5 py-0.5 rounded-full">
-                    50
-                  </span>
+                  <span className="count-badge">{filteredStations.length}</span>
                 </div>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer text-gray-400 hover:text-white"
-                  title="Collapse"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                {!mobile && (
+                  <button
+                    onClick={() => setIsOpen(false)}
+                    className="collapse-btn"
+                    title="Collapse"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                )}
               </div>
 
               {/* Search Box */}
-              <div className="relative mb-4">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <div style={{ position: 'relative', marginBottom: '10px' }}>
+                <Search
+                  size={15}
+                  style={{
+                    position: 'absolute',
+                    left: '13px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: 'rgba(148,163,184,0.75)',
+                    pointerEvents: 'none',
+                  }}
+                />
                 <input
                   type="text"
                   placeholder="Search stations..."
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500/50 transition-colors"
+                  onChange={e => setSearch(e.target.value)}
+                  className="station-search-input"
+                  style={{
+                    paddingLeft: '38px',
+                    paddingRight: '12px',
+                    paddingTop: '9px',
+                    paddingBottom: '9px',
+                  }}
                 />
               </div>
 
-              {/* Line Legend */}
-              <div className="flex items-center gap-5 pt-1 pb-1">
+              {/* Line filter buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 {LINES.map(line => {
-                  const color = LINE_COLORS[line.id];
+                  const color    = LINE_COLORS[line.id];
                   const isActive = activeFilter === line.id;
-                  const displayName = line.id === 'purple' ? 'Purple' : line.id === 'aqua' ? 'Aqua' : 'Line 3';
+                  const label    = line.id === 'purple' ? 'Purple' : line.id === 'aqua' ? 'Aqua' : 'Line 3';
                   return (
                     <button
                       key={line.id}
                       onClick={() => setActiveFilter(activeFilter === line.id ? 'all' : line.id)}
-                      className={`flex items-center gap-2 cursor-pointer transition-opacity ${
-                        isActive ? 'opacity-100' : 'opacity-70 hover:opacity-100'
-                      }`}
+                      className="line-filter-btn"
+                      style={{ opacity: isActive || activeFilter === 'all' ? 1 : 0.45 }}
                     >
-                      <span
-                        className="w-3 h-3 rounded-full border-2"
-                        style={{
-                          borderColor: color.primary,
-                          backgroundColor: color.primary,
-                        }}
-                      />
-                      <span className="text-[12px] text-gray-300 font-medium">
-                        {displayName}
-                      </span>
+                      <span className="line-dot" style={{ backgroundColor: color.primary }} />
+                      <span>{label}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Subtle separator */}
-            <div className="h-px bg-white/10 mx-5 mb-2" />
+            {/* Separator */}
+            <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '0 16px 4px' }} />
 
-            {/* Scrollable station list exactly like reference */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-2 pb-4">
-              {filteredStations.map((station) => {
-                const color = LINE_COLORS[station.line];
+            {/* Station list */}
+            <div
+              className="custom-scrollbar"
+              style={{ flex: 1, overflowY: 'auto', padding: '6px 10px 16px' }}
+            >
+              {filteredStations.map(station => {
+                const color      = LINE_COLORS[station.line];
                 const isSelected = selectedStation === station.id;
-
-                if (isSelected) {
-                  return (
-                    <motion.button
-                      key={station.id}
-                      onClick={() => onStationSelect(station.id)}
-                      className="w-full text-left px-4 py-3 my-1.5 rounded-xl bg-purple-500/20 border border-purple-500/45 flex items-center gap-3.5 transition-all cursor-pointer shadow-lg"
-                      whileHover={{ scale: 1.01 }}
-                      transition={{ duration: 0.1 }}
-                    >
-                      {/* Selected circle icon matching reference */}
-                      <div className="flex-shrink-0">
-                        <div
-                          className="w-4 h-4 rounded-full border-2 flex items-center justify-center"
-                          style={{ borderColor: color.primary }}
-                        >
-                          <span
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: color.primary }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Station Info */}
-                      <div className="min-w-0">
-                        <p className="text-white text-[14px] font-semibold leading-tight">
-                          {station.name}
-                        </p>
-                        <p className="text-gray-400 text-[12px] mt-0.5 leading-tight">
-                          {station.lineName}
-                        </p>
-                      </div>
-                    </motion.button>
-                  );
-                }
-
                 return (
                   <motion.button
                     key={station.id}
                     onClick={() => onStationSelect(station.id)}
-                    className="w-full text-left px-4 py-3 my-0.5 rounded-xl hover:bg-white/[0.04] flex items-center gap-3.5 transition-all cursor-pointer"
-                    whileHover={{ x: 3 }}
+                    className={`station-item${isSelected ? ' selected' : ''}`}
+                    style={{ padding: '9px 12px', marginBottom: '2px' }}
+                    whileHover={!isSelected ? { x: 2 } : {}}
                     transition={{ duration: 0.1 }}
                   >
-                    {/* Unselected circular ring icon matching reference */}
-                    <div className="flex-shrink-0">
-                      <div
-                        className="w-4 h-4 rounded-full border-2"
-                        style={{
-                          borderColor: color.primary,
-                          backgroundColor: 'transparent',
-                        }}
-                      />
+                    <div className="station-dot" style={{ borderColor: color.primary }}>
+                      <span className="dot-inner" style={{ backgroundColor: color.primary }} />
                     </div>
-
-                    {/* Station Info */}
-                    <div className="min-w-0">
-                      <p className="text-white text-[14px] font-medium leading-tight">
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <p style={{
+                        color: '#f1f5f9',
+                        fontSize: '14px',
+                        fontWeight: isSelected ? 600 : 500,
+                        lineHeight: 1.3,
+                        margin: 0,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}>
                         {station.name}
                       </p>
-                      <p className="text-gray-400 text-[12px] mt-0.5 leading-tight">
+                      <p style={{
+                        color: 'rgba(148,163,184,0.75)',
+                        fontSize: '12px',
+                        margin: 0,
+                        lineHeight: 1.2,
+                      }}>
                         {station.lineName}
                       </p>
                     </div>
                   </motion.button>
                 );
               })}
-
               {filteredStations.length === 0 && (
-                <div className="p-8 text-center text-gray-500 text-sm">
+                <div style={{ padding: '40px 16px', textAlign: 'center', color: 'rgba(148,163,184,0.5)', fontSize: '13px' }}>
                   No stations found
                 </div>
               )}

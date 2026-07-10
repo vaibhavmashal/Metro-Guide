@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
+import { Train, Route, ListFilter } from 'lucide-react';
 import type maplibregl from 'maplibre-gl';
 
 import MetroMap, { type MetroMapHandle } from './components/MetroMap';
@@ -16,17 +17,32 @@ import type { RouteResult } from './utils/pathfinding';
 
 import './App.css';
 
-function App() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [mapStyle, setMapStyle] = useState('dark');
-  const [settings, setSettings] = useState<SceneSettings>({ ...DEFAULT_SCENE_SETTINGS });
-  const [is3DTerrain, setIs3DTerrain] = useState(false);
-  const [selectedStation, setSelectedStation] = useState<string | null>(null);
-  const [detailStation, setDetailStation] = useState<string | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
+/* ── hook to detect mobile breakpoint ── */
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return isMobile;
+}
 
-  const mapRef = useRef<MetroMapHandle>(null);
+type MobileTab = 'map' | 'stations' | 'route';
+
+function App() {
+  const [isLoading, setIsLoading]       = useState(true);
+  const [mapStyle, setMapStyle]         = useState('dark');
+  const [settings, setSettings]         = useState<SceneSettings>({ ...DEFAULT_SCENE_SETTINGS });
+  const [is3DTerrain, setIs3DTerrain]   = useState(false);
+  const [selectedStation, setSelectedStation] = useState<string | null>(null);
+  const [detailStation, setDetailStation]     = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mapInstance, setMapInstance]   = useState<maplibregl.Map | null>(null);
+  const [activeTab, setActiveTab]       = useState<MobileTab>('map');
+
+  const isMobile = useIsMobile();
+  const mapRef   = useRef<MetroMapHandle>(null);
 
   const handleMapReady = useCallback((map: maplibregl.Map) => {
     setMapInstance(map);
@@ -36,7 +52,8 @@ function App() {
     setSelectedStation(stationId);
     setDetailStation(stationId);
     mapRef.current?.flyToStation(stationId);
-  }, []);
+    if (isMobile) setActiveTab('map');
+  }, [isMobile]);
 
   const handleStationClick = useCallback((stationId: string) => {
     setSelectedStation(stationId);
@@ -46,7 +63,8 @@ function App() {
 
   const handleRouteCalculated = useCallback((route: RouteResult | null) => {
     mapRef.current?.highlightRoute(route);
-  }, []);
+    if (isMobile && route) setActiveTab('map');
+  }, [isMobile]);
 
   const handleToggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -67,7 +85,8 @@ function App() {
     setSelectedStation(stationId);
     setDetailStation(stationId);
     mapRef.current?.flyToStation(stationId);
-  }, []);
+    if (isMobile) setActiveTab('map');
+  }, [isMobile]);
 
   return (
     <div className="app-container">
@@ -78,7 +97,7 @@ function App() {
         )}
       </AnimatePresence>
 
-      {/* 3D Map */}
+      {/* 3D Map — full viewport */}
       <MetroMap
         ref={mapRef}
         mapStyle={mapStyle}
@@ -88,51 +107,116 @@ function App() {
         onMapReady={handleMapReady}
       />
 
-      {/* UI Overlays — show after loading */}
+      {/* UI Overlays */}
       {!isLoading && (
         <>
-          {/* Top-left: Header branding */}
+          {/* ── Header (always visible) ── */}
           <Header />
 
-          {/* Top-center: Route planner */}
-          <RoutePlanner
-            onRouteCalculated={handleRouteCalculated}
-            onStationFocus={handleNavigateStation}
-          />
+          {/* ── Desktop-only overlays ── */}
+          {!isMobile && (
+            <>
+              {/* Top-center: Route planner */}
+              <RoutePlanner
+                onRouteCalculated={handleRouteCalculated}
+                onStationFocus={handleNavigateStation}
+              />
 
-          {/* Right side: Station list panel */}
-          <StationPanel
-            onStationSelect={handleStationSelect}
-            selectedStation={selectedStation}
-          />
+              {/* Right: Station list panel */}
+              <StationPanel
+                onStationSelect={handleStationSelect}
+                selectedStation={selectedStation}
+              />
 
-          {/* Bottom-left: Station detail card (when station is clicked) */}
-          <StationDetail
-            stationId={detailStation}
-            onClose={handleCloseDetail}
-            onNavigate={handleNavigateStation}
-          />
+              {/* Bottom-left: Station detail */}
+              <StationDetail
+                stationId={detailStation}
+                onClose={handleCloseDetail}
+                onNavigate={handleNavigateStation}
+              />
 
-          {/* Bottom-left: Map style switcher FAB */}
-          <MapStyleSwitcher
-            currentStyle={mapStyle}
-            onStyleChange={setMapStyle}
-            is3DTerrain={is3DTerrain}
-            onToggle3DTerrain={setIs3DTerrain}
-          />
+              {/* Bottom-left FABs */}
+              <MapStyleSwitcher
+                currentStyle={mapStyle}
+                onStyleChange={setMapStyle}
+                is3DTerrain={is3DTerrain}
+                onToggle3DTerrain={setIs3DTerrain}
+              />
+              <SettingsPanel
+                settings={settings}
+                onSettingsChange={setSettings}
+              />
 
-          {/* Bottom-left: Settings FAB (next to layers) */}
-          <SettingsPanel
-            settings={settings}
-            onSettingsChange={setSettings}
-          />
+              {/* Map controls */}
+              <MapControls
+                map={mapInstance}
+                isFullscreen={isFullscreen}
+                onToggleFullscreen={handleToggleFullscreen}
+              />
+            </>
+          )}
 
-          {/* Bottom-right: Map controls */}
-          <MapControls
-            map={mapInstance}
-            isFullscreen={isFullscreen}
-            onToggleFullscreen={handleToggleFullscreen}
-          />
+          {/* ── Mobile layout ── */}
+          {isMobile && (
+            <>
+              {/* Map controls — compact top-right */}
+              <MapControls
+                map={mapInstance}
+                isFullscreen={isFullscreen}
+                onToggleFullscreen={handleToggleFullscreen}
+              />
+
+              {/* Stations tab panel — bottom sheet */}
+              {activeTab === 'stations' && (
+                <StationPanel
+                  onStationSelect={handleStationSelect}
+                  selectedStation={selectedStation}
+                />
+              )}
+
+              {/* Route planner tab — bottom sheet */}
+              {activeTab === 'route' && (
+                <RoutePlanner
+                  onRouteCalculated={handleRouteCalculated}
+                  onStationFocus={handleNavigateStation}
+                />
+              )}
+
+              {/* Station detail — bottom sheet (when station clicked on map) */}
+              {activeTab === 'map' && (
+                <StationDetail
+                  stationId={detailStation}
+                  onClose={handleCloseDetail}
+                  onNavigate={handleNavigateStation}
+                />
+              )}
+
+              {/* Bottom nav bar */}
+              <nav className="mobile-nav-bar">
+                <button
+                  className={`mobile-nav-btn ${activeTab === 'map' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('map')}
+                >
+                  <Train size={18} />
+                  Map
+                </button>
+                <button
+                  className={`mobile-nav-btn ${activeTab === 'stations' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('stations')}
+                >
+                  <ListFilter size={18} />
+                  Stations
+                </button>
+                <button
+                  className={`mobile-nav-btn ${activeTab === 'route' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('route')}
+                >
+                  <Route size={18} />
+                  Route
+                </button>
+              </nav>
+            </>
+          )}
         </>
       )}
     </div>
