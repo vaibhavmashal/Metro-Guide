@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import maplibregl, { type Map as MaplibreMap, type CustomLayerInterface } from 'maplibre-gl';
-import { LINES, LINE_COLORS, STATIONS, ROUTE_COORDINATES } from '../data/metroData';
+import type { CityConfig } from '../data/cityData';
 
 export interface ThreeLayerOptions {
   showGuideway: boolean;
@@ -17,7 +17,8 @@ export interface ThreeLayerOptions {
 
 export function createThreeLayer(
   map: MaplibreMap,
-  options: ThreeLayerOptions
+  options: ThreeLayerOptions,
+  cityConfig: CityConfig
 ): CustomLayerInterface {
   let renderer: THREE.WebGLRenderer;
   let scene: THREE.Scene;
@@ -70,7 +71,7 @@ export function createThreeLayer(
       haloGroup.visible = options.showStationHalos;
     },
 
-    render(_gl: WebGLRenderingContext, args: { defaultProjectionData: { mainMatrix: number[] } }) {
+    render(_gl: WebGLRenderingContext, args: any) {
       if (args?.defaultProjectionData?.mainMatrix) {
         camera.projectionMatrix = new THREE.Matrix4().fromArray(args.defaultProjectionData.mainMatrix);
       }
@@ -100,10 +101,12 @@ export function createThreeLayer(
   function buildElevatedInfrastructure(group: THREE.Group) {
     const trackAltitude = 16; // 16 meters above ground
 
-    LINES.forEach(lineInfo => {
-      const lineColor = new THREE.Color(LINE_COLORS[lineInfo.id].primary);
+    cityConfig.lines.forEach(lineInfo => {
+      const colorObj = cityConfig.lineColors[lineInfo.id] || { primary: '#a855f7' };
+      const lineColor = new THREE.Color(colorObj.primary);
       const darkViaductColor = new THREE.Color(0x1e293b);
-      const coords = ROUTE_COORDINATES[lineInfo.id];
+      const coords = cityConfig.routeCoordinates[lineInfo.id];
+      if (!coords || coords.length < 2) return;
 
       for (let i = 0; i < coords.length - 1; i++) {
         const [lng1, lat1] = coords[i];
@@ -178,12 +181,12 @@ export function createThreeLayer(
   function buildStation3DStructures(group: THREE.Group, stationScale: number) {
     const stationAltitude = 18;
 
-    Object.values(STATIONS).forEach(station => {
+    Object.values(cityConfig.stations).forEach(station => {
       const coord = maplibregl.MercatorCoordinate.fromLngLat([station.lng, station.lat], stationAltitude);
       const meterScale = coord.meterInMercatorCoordinateUnits();
 
-      const colorHex = LINE_COLORS[station.line].primary;
-      const primaryColor = new THREE.Color(colorHex);
+      const colorObj = cityConfig.lineColors[station.line] || { primary: '#a855f7' };
+      const primaryColor = new THREE.Color(colorObj.primary);
 
       const length = 95 * meterScale * stationScale;
       const width = 18 * meterScale * stationScale;
@@ -229,10 +232,11 @@ export function createThreeLayer(
   // ---- Build Animated Glowing Ground Rings Below Stations ----
   function buildAnimatedStationRings(group: THREE.Group, stationScale: number) {
     let index = 0;
-    Object.values(STATIONS).forEach(station => {
+    Object.values(cityConfig.stations).forEach(station => {
       const coord = maplibregl.MercatorCoordinate.fromLngLat([station.lng, station.lat], 0.3);
       const meterScale = coord.meterInMercatorCoordinateUnits();
-      const color = new THREE.Color(LINE_COLORS[station.line].primary);
+      const colorObj = cityConfig.lineColors[station.line] || { primary: '#a855f7' };
+      const color = new THREE.Color(colorObj.primary);
 
       const innerRadius = 20 * meterScale * stationScale;
       const outerRadius = 28 * meterScale * stationScale;

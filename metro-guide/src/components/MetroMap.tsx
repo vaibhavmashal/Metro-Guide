@@ -1,9 +1,6 @@
 import { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import maplibregl from 'maplibre-gl';
-import {
-  STATIONS, LINES, LINE_COLORS, ROUTE_COORDINATES,
-  PUNE_CENTER,
-} from '../data/metroData';
+import { CITY_CONFIGS, type CityConfig } from '../data/cityData';
 import { MAP_STYLES, LIGHTING_PRESETS, type SceneSettings } from '../utils/mapStyles';
 import type { RouteResult } from '../utils/pathfinding';
 import { createThreeLayer } from './ThreeLayer';
@@ -20,21 +17,26 @@ interface MetroMapProps {
   selectedStation: string | null;
   onStationClick: (stationId: string) => void;
   onMapReady: (map: maplibregl.Map) => void;
+  cityConfig?: CityConfig;
 }
 
 const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
-  ({ mapStyle, settings, selectedStation, onStationClick, onMapReady }, ref) => {
+  ({ mapStyle, settings, selectedStation, onStationClick, onMapReady, cityConfig = CITY_CONFIGS.pune }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
     const animFrameRef = useRef<number>(0);
     const trainMarkersRef = useRef<maplibregl.Marker[]>([]);
     const layersAddedRef = useRef(false);
     const prevStyleRef = useRef(mapStyle);
+    const cityConfigRef = useRef(cityConfig);
+    const prevCityIdRef = useRef(cityConfig.id);
+
+    cityConfigRef.current = cityConfig;
 
     useImperativeHandle(ref, () => ({
       getMap: () => mapRef.current,
       flyToStation: (stationId: string) => {
-        const station = STATIONS[stationId];
+        const station = cityConfigRef.current.stations[stationId];
         if (!station || !mapRef.current) return;
         mapRef.current.flyTo({
           center: [station.lng, station.lat],
@@ -59,9 +61,9 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
       if (!route) return;
 
       const coords = route.path.map(id => {
-        const s = STATIONS[id];
-        return [s.lng, s.lat] as [number, number];
-      });
+        const s = cityConfigRef.current.stations[id];
+        return s ? ([s.lng, s.lat] as [number, number]) : null;
+      }).filter(Boolean) as [number, number][];
 
       map.addSource('route-highlight', {
         type: 'geojson',
@@ -101,97 +103,41 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
       map.fitBounds(bounds, { padding: 120, pitch: 65, duration: 1500 });
     }, []);
 
-    // Initialize map once
-    useEffect(() => {
-      if (!containerRef.current || mapRef.current) return;
-
-      const selectedStyleObj = MAP_STYLES.find(s => s.id === mapStyle) || MAP_STYLES[0];
-      const styleConfig = selectedStyleObj.style || selectedStyleObj.url || MAP_STYLES[0].url!;
-
-      const map = new maplibregl.Map({
-        container: containerRef.current,
-        style: styleConfig,
-        center: PUNE_CENTER,
-        zoom: 14.5,
-        pitch: 66,
-        bearing: -20,
-        antialias: true,
-        maxPitch: 85,
+    // Remove existing metro layers before adding new ones
+    const removeMetroLayers = useCallback((map: maplibregl.Map) => {
+      // Remove station layers
+      const stationLayers = ['station-labels', 'station-selected-ring', 'station-circle'];
+      stationLayers.forEach(id => {
+        if (map.getLayer(id)) map.removeLayer(id);
       });
+      if (map.getSource('metro-stations')) map.removeSource('metro-stations');
 
-      mapRef.current = map;
+      // Remove route highlight
+      if (map.getLayer('route-highlight')) map.removeLayer('route-highlight');
+      if (map.getLayer('route-highlight-glow')) map.removeLayer('route-highlight-glow');
+      if (map.getSource('route-highlight')) map.removeSource('route-highlight');
 
-      map.on('load', () => {
-        addAllLayers(map);
-        applySettings(map, settings);
-        onMapReady(map);
-        startTrainAnimation(map);
-        layersAddedRef.current = true;
+      // Remove 3D infrastructure layer when reloading layers
+      if (map.getLayer('three-metro-layer')) map.removeLayer('three-metro-layer');
+
+      // Remove line layers for all cities
+      Object.values(CITY_CONFIGS).forEach(cfg => {
+        cfg.lines.forEach(l => {
+          const mainId = `metro-line-${l.id}-main`;
+          const glowId = `metro-line-${l.id}-glow`;
+          const sourceId = `metro-line-${l.id}`;
+          if (map.getLayer(mainId)) map.removeLayer(mainId);
+          if (map.getLayer(glowId)) map.removeLayer(glowId);
+          if (map.getSource(sourceId)) map.removeSource(sourceId);
+        });
       });
-
-      return () => {
-        cancelAnimationFrame(animFrameRef.current);
-        trainMarkersRef.current.forEach(m => m.remove());
-        map.remove();
-        mapRef.current = null;
-        layersAddedRef.current = false;
-      };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Map style changes
-    useEffect(() => {
-      const map = mapRef.current;
-      if (!map || mapStyle === prevStyleRef.current) return;
-      prevStyleRef.current = mapStyle;
+    // Add metro layers for a specific city config
+    const addAllLayers = useCallback((map: maplibregl.Map, config: CityConfig) => {
+      // Remove any existing metro layers before creating new ones
+      removeMetroLayers(map);
 
-      const selectedStyleObj = MAP_STYLES.find(s => s.id === mapStyle) || MAP_STYLES[0];
-      const styleConfig = selectedStyleObj.style || selectedStyleObj.url || MAP_STYLES[0].url!;
-
-      trainMarkersRef.current.forEach(m => m.remove());
-      trainMarkersRef.current = [];
-      cancelAnimationFrame(animFrameRef.current);
-
-      map.setStyle(styleConfig);
-      layersAddedRef.current = false;
-
-      map.once('style.load', () => {
-        addAllLayers(map);
-        applySettings(map, settings);
-        startTrainAnimation(map);
-        layersAddedRef.current = true;
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mapStyle]);
-
-    // Settings changes
-    useEffect(() => {
-      const map = mapRef.current;
-      if (!map || !layersAddedRef.current) return;
-      try {
-        applySettings(map, settings);
-      } catch {
-        // Style may not be loaded yet
-      }
-    }, [settings]);
-
-    // Selected station highlight filter
-    useEffect(() => {
-      const map = mapRef.current;
-      if (!map || !layersAddedRef.current) return;
-      try {
-        if (map.getLayer('station-selected-ring')) {
-          if (selectedStation) {
-            map.setFilter('station-selected-ring', ['==', ['get', 'id'], selectedStation]);
-          } else {
-            map.setFilter('station-selected-ring', ['==', ['get', 'id'], '']);
-          }
-        }
-      } catch { /* noop */ }
-    }, [selectedStation]);
-
-    // Add all metro GeoJSON layers AND Three.js 3D elevated layer
-    const addAllLayers = useCallback((map: maplibregl.Map) => {
       // 1. Add 3D vector tile buildings if available in source
       const style = map.getStyle();
       const sources = style.sources || {};
@@ -229,25 +175,29 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
         );
       }
 
-      // 2. Add Three.js Custom 3D Layer for Elevated Infrastructure & Station Boxes
-      if (!map.getLayer('three-metro-layer')) {
-        try {
-          const threeLayer = createThreeLayer(map, {
+      // 2. Add Three.js Custom 3D Layer for Elevated Infrastructure & Animated Station Rings
+      try {
+        const threeLayer = createThreeLayer(
+          map,
+          {
             showGuideway: settings.showMetroGuideway,
             showStationHalos: settings.showStationHalos,
             showNeonGlow: settings.showNeonGlow,
             stationSize: settings.stationSize,
-          });
-          map.addLayer(threeLayer);
-        } catch (err) {
-          console.warn('Three.js layer initialization:', err);
-        }
+          },
+          config
+        );
+        map.addLayer(threeLayer);
+      } catch (err) {
+        console.warn('Three.js layer initialization:', err);
       }
 
       // 3. Add Metro line track strips on ground/map
-      LINES.forEach(line => {
-        const color = LINE_COLORS[line.id];
-        const coords = ROUTE_COORDINATES[line.id];
+      config.lines.forEach(line => {
+        const color = config.lineColors[line.id] || { primary: '#a855f7', glow: '#c084fc' };
+        const coords = config.routeCoordinates[line.id] || [];
+        if (coords.length < 2) return;
+
         const sourceId = `metro-line-${line.id}`;
         if (map.getSource(sourceId)) return;
 
@@ -302,21 +252,24 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
       });
 
       // 4. Add Station Markers
-      const stationFeatures = Object.values(STATIONS).map(station => ({
-        type: 'Feature' as const,
-        properties: {
-          id: station.id,
-          name: station.name,
-          line: station.line,
-          color: LINE_COLORS[station.line].primary,
-          glowColor: LINE_COLORS[station.line].glow,
-          isInterchange: station.isInterchange,
-        },
-        geometry: {
-          type: 'Point' as const,
-          coordinates: [station.lng, station.lat],
-        },
-      }));
+      const stationFeatures = Object.values(config.stations).map(station => {
+        const color = config.lineColors[station.line] || { primary: '#a855f7', glow: '#c084fc' };
+        return {
+          type: 'Feature' as const,
+          properties: {
+            id: station.id,
+            name: station.name,
+            line: station.line,
+            color: color.primary,
+            glowColor: color.glow,
+            isInterchange: station.isInterchange,
+          },
+          geometry: {
+            type: 'Point' as const,
+            coordinates: [station.lng, station.lat],
+          },
+        };
+      });
 
       if (!map.getSource('metro-stations')) {
         map.addSource('metro-stations', {
@@ -401,10 +354,10 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
       map.on('mouseleave', 'station-circle', () => {
         map.getCanvas().style.cursor = '';
       });
-    }, [onStationClick, settings]);
+    }, [onStationClick, removeMetroLayers, settings]);
 
     // Apply scene settings
-    const applySettings = useCallback((map: maplibregl.Map, s: SceneSettings) => {
+    const applySettings = useCallback((map: maplibregl.Map, s: SceneSettings, config: CityConfig) => {
       const lighting = LIGHTING_PRESETS[s.lighting];
 
       try {
@@ -425,7 +378,7 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
         map.setLayoutProperty('three-metro-layer', 'visibility', s.showMetroGuideway ? 'visible' : 'none');
       }
 
-      LINES.forEach(line => {
+      config.lines.forEach(line => {
         const mainId = `metro-line-${line.id}-main`;
         const glowId = `metro-line-${line.id}-glow`;
         if (map.getLayer(mainId)) {
@@ -436,25 +389,24 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
         }
       });
 
-
       if (map.getLayer('station-labels')) {
         map.setLayoutProperty('station-labels', 'visibility', s.showStationLabels ? 'visible' : 'none');
       }
     }, []);
 
     // Animated metro train markers
-    const startTrainAnimation = useCallback((map: maplibregl.Map) => {
+    const startTrainAnimation = useCallback((map: maplibregl.Map, config: CityConfig) => {
       trainMarkersRef.current.forEach(m => m.remove());
       trainMarkersRef.current = [];
 
-      const lineConfigs: { line: string; coords: [number, number][]; count: number }[] = [
-        { line: 'purple', coords: ROUTE_COORDINATES.purple, count: 3 },
-        { line: 'aqua', coords: ROUTE_COORDINATES.aqua, count: 3 },
-        { line: 'line3', coords: ROUTE_COORDINATES.line3, count: 2 },
-      ];
+      const lineConfigs = config.lines.map(line => ({
+        line: line.id,
+        coords: config.routeCoordinates[line.id] || [],
+        count: 2,
+      })).filter(l => l.coords.length >= 2);
 
       lineConfigs.forEach(({ line, coords, count }) => {
-        const color = LINE_COLORS[line as keyof typeof LINE_COLORS];
+        const color = config.lineColors[line] || { primary: '#a855f7' };
         for (let i = 0; i < count; i++) {
           const el = document.createElement('div');
           el.style.cssText = `
@@ -471,6 +423,8 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
           trainMarkersRef.current.push(marker);
         }
       });
+
+      cancelAnimationFrame(animFrameRef.current);
 
       const animate = (time: number) => {
         const elapsed = time / 1000;
@@ -497,6 +451,116 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
       };
       animFrameRef.current = requestAnimationFrame(animate);
     }, []);
+
+    // Initialize map once
+    useEffect(() => {
+      if (!containerRef.current || mapRef.current) return;
+
+      const selectedStyleObj = MAP_STYLES.find(s => s.id === mapStyle) || MAP_STYLES[0];
+      const styleConfig = selectedStyleObj.style || selectedStyleObj.url || MAP_STYLES[0].url!;
+
+      const map = new maplibregl.Map({
+        container: containerRef.current,
+        style: styleConfig,
+        center: cityConfig.center,
+        zoom: cityConfig.defaultZoom,
+        pitch: cityConfig.defaultPitch,
+        bearing: cityConfig.defaultBearing,
+        antialias: true,
+        maxPitch: 85,
+      } as any);
+
+      mapRef.current = map;
+
+      map.on('load', () => {
+        addAllLayers(map, cityConfigRef.current);
+        applySettings(map, settings, cityConfigRef.current);
+        onMapReady(map);
+        startTrainAnimation(map, cityConfigRef.current);
+        layersAddedRef.current = true;
+      });
+
+      return () => {
+        cancelAnimationFrame(animFrameRef.current);
+        trainMarkersRef.current.forEach(m => m.remove());
+        map.remove();
+        mapRef.current = null;
+        layersAddedRef.current = false;
+      };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Handle city change dynamically
+    useEffect(() => {
+      const map = mapRef.current;
+      if (!map || !layersAddedRef.current) return;
+      if (prevCityIdRef.current === cityConfig.id) return;
+      prevCityIdRef.current = cityConfig.id;
+
+      map.flyTo({
+        center: cityConfig.center,
+        zoom: cityConfig.defaultZoom,
+        pitch: cityConfig.defaultPitch,
+        bearing: cityConfig.defaultBearing,
+        duration: 2500,
+        essential: true,
+      });
+
+      addAllLayers(map, cityConfig);
+      applySettings(map, settings, cityConfig);
+      startTrainAnimation(map, cityConfig);
+    }, [cityConfig, addAllLayers, applySettings, startTrainAnimation, settings]);
+
+    // Map style changes
+    useEffect(() => {
+      const map = mapRef.current;
+      if (!map || mapStyle === prevStyleRef.current) return;
+      prevStyleRef.current = mapStyle;
+
+      const selectedStyleObj = MAP_STYLES.find(s => s.id === mapStyle) || MAP_STYLES[0];
+      const styleConfig = selectedStyleObj.style || selectedStyleObj.url || MAP_STYLES[0].url!;
+
+      trainMarkersRef.current.forEach(m => m.remove());
+      trainMarkersRef.current = [];
+      cancelAnimationFrame(animFrameRef.current);
+
+      map.setStyle(styleConfig);
+      layersAddedRef.current = false;
+
+      map.once('style.load', () => {
+        addAllLayers(map, cityConfigRef.current);
+        applySettings(map, settings, cityConfigRef.current);
+        startTrainAnimation(map, cityConfigRef.current);
+        layersAddedRef.current = true;
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mapStyle]);
+
+    // Settings changes
+    useEffect(() => {
+      const map = mapRef.current;
+      if (!map || !layersAddedRef.current) return;
+      try {
+        applySettings(map, settings, cityConfigRef.current);
+      } catch {
+        // Style may not be loaded yet
+      }
+    }, [settings, applySettings]);
+
+    // Selected station highlight filter
+    useEffect(() => {
+      const map = mapRef.current;
+      if (!map || !layersAddedRef.current) return;
+      try {
+        if (map.getLayer('station-selected-ring')) {
+          if (selectedStation) {
+            map.setFilter('station-selected-ring', ['==', ['get', 'id'], selectedStation]);
+          } else {
+            map.setFilter('station-selected-ring', ['==', ['get', 'id'], '']);
+          }
+        }
+      } catch { /* noop */ }
+    }, [selectedStation]);
 
     return (
       <div

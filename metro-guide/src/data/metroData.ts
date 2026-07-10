@@ -6,12 +6,12 @@
 export interface Station {
   id: string;
   name: string;
-  line: MetroLine;
+  line: string;
   lat: number;
   lng: number;
   connectedStations: string[];
   isInterchange: boolean;
-  interchangeLines?: MetroLine[];
+  interchangeLines?: string[];
   nearbyPlaces: string[];
   facilities: string[];
 }
@@ -19,7 +19,7 @@ export interface Station {
 export type MetroLine = 'purple' | 'aqua' | 'line3';
 
 export interface LineInfo {
-  id: MetroLine;
+  id: string;
   name: string;
   fullName: string;
   color: string;
@@ -27,7 +27,7 @@ export interface LineInfo {
   stations: string[];
 }
 
-export const LINE_COLORS: Record<MetroLine, { primary: string; glow: string; rgb: [number, number, number] }> = {
+export const LINE_COLORS: Record<string, { primary: string; glow: string; rgb: [number, number, number] }> = {
   purple: { primary: '#a855f7', glow: '#c084fc', rgb: [168, 85, 247] },
   aqua: { primary: '#06b6d4', glow: '#22d3ee', rgb: [6, 182, 212] },
   line3: { primary: '#ec4899', glow: '#f472b6', rgb: [236, 72, 153] },
@@ -571,7 +571,7 @@ export const STATIONS: Record<string, Station> = {
 };
 
 // Route coordinate arrays for rendering track lines on the map
-export const ROUTE_COORDINATES: Record<MetroLine, [number, number][]> = {
+export const ROUTE_COORDINATES: Record<string, [number, number][]> = {
   purple: [
     [73.7997, 18.6298], [73.8005, 18.6215], [73.8010, 18.6160],
     [73.8025, 18.6090], [73.8095, 18.5978], [73.8175, 18.5900],

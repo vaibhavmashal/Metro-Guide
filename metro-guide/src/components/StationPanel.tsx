@@ -1,20 +1,25 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ChevronRight, ChevronDown } from 'lucide-react';
-import { STATIONS, LINES, LINE_COLORS, type MetroLine } from '../data/metroData';
+import { CITY_CONFIGS, type CityConfig } from '../data/cityData';
 
 interface StationPanelProps {
   onStationSelect: (stationId: string) => void;
   selectedStation: string | null;
+  cityConfig?: CityConfig;
 }
 
 const isMobile = () => window.innerWidth < 640;
 
-export default function StationPanel({ onStationSelect, selectedStation }: StationPanelProps) {
-  const [isOpen, setIsOpen]     = useState(true);
-  const [search, setSearch]     = useState('');
-  const [activeFilter, setActiveFilter] = useState<MetroLine | 'all'>('all');
-  const [mobile, setMobile]     = useState(isMobile);
+export default function StationPanel({
+  onStationSelect,
+  selectedStation,
+  cityConfig = CITY_CONFIGS.pune,
+}: StationPanelProps) {
+  const [isOpen, setIsOpen] = useState(true);
+  const [search, setSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [mobile, setMobile] = useState(isMobile);
 
   useEffect(() => {
     const handler = () => setMobile(isMobile());
@@ -22,45 +27,55 @@ export default function StationPanel({ onStationSelect, selectedStation }: Stati
     return () => window.removeEventListener('resize', handler);
   }, []);
 
+  // Reset line filter when city changes
+  useEffect(() => {
+    setActiveFilter('all');
+    setSearch('');
+  }, [cityConfig.id]);
+
   const allStations = useMemo(() => {
-    const stationMap = new Map<string, { id: string; name: string; line: MetroLine; lineName: string }>();
-    Object.values(STATIONS).forEach(station => {
+    const stationMap = new Map<string, { id: string; name: string; line: string; lineName: string }>();
+    Object.values(cityConfig.stations).forEach(station => {
       const displayName = station.name;
+      const lineObj = cityConfig.lines.find(l => l.id === station.line);
+      const lineName = lineObj ? lineObj.name + ' Line' : station.line;
       if (!stationMap.has(displayName)) {
-        let lineName = 'Purple Line';
-        if (station.line === 'aqua')   lineName = 'Aqua Line';
-        else if (station.line === 'line3') lineName = 'Line 3';
-        stationMap.set(displayName, { id: station.id, name: displayName, line: station.line, lineName });
+        stationMap.set(displayName, {
+          id: station.id,
+          name: displayName,
+          line: station.line,
+          lineName,
+        });
       }
     });
     return Array.from(stationMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, []);
+  }, [cityConfig]);
 
   const filteredStations = useMemo(() =>
     allStations.filter(station => {
       const matchesSearch = station.name.toLowerCase().includes(search.toLowerCase());
-      const matchesFilter = activeFilter === 'all' || station.line === activeFilter;
-      return matchesSearch && matchesFilter;
+      const matchesLine = activeFilter === 'all' || station.line === activeFilter;
+      return matchesSearch && matchesLine;
     }),
     [allStations, search, activeFilter]
   );
 
-  /* ── Mobile bottom-sheet positioning ── */
+  /* Shared positions for collapsed button and open panel */
   const mobileStyle: React.CSSProperties = {
     position: 'fixed',
-    bottom: 60,           /* above mobile nav bar */
+    bottom: '60px', // above mobile nav bar
     left: 0,
     right: 0,
-    height: '65vh',
-    zIndex: 20,
+    width: '100%',
+    maxHeight: '60vh',
+    zIndex: 25,
   };
 
-  /* ── Desktop sidebar positioning ── */
   const desktopStyle: React.CSSProperties = {
     position: 'fixed',
     top: 16,
     right: 16,
-    height: 'calc(100vh - 136px)',   /* leaves ~120px at bottom for map controls */
+    height: 'calc(100vh - 136px)', // leaves room at bottom for map controls
     width: '320px',
     zIndex: 20,
   };
@@ -78,29 +93,25 @@ export default function StationPanel({ onStationSelect, selectedStation }: Stati
             exit={{ opacity: 0, x: 20 }}
             onClick={() => setIsOpen(true)}
             className="fixed top-4 right-4 z-20 glass-card p-3.5 cursor-pointer hover:bg-white/10 transition-colors rounded-2xl shadow-xl"
-            title="Open stations panel"
+            style={{
+              background: 'rgba(22, 24, 40, 0.88)',
+              backdropFilter: 'blur(36px) saturate(180%)',
+              border: '1px solid rgba(255,255,255,0.10)',
+            }}
+            title="Open Stations"
           >
-            <ChevronRight className="w-5 h-5 text-white rotate-180" />
+            <ChevronDown size={18} className="text-purple-400 transform -rotate-90" />
           </motion.button>
         )}
       </AnimatePresence>
 
-      {/* Panel */}
+      {/* Main Panel */}
       <AnimatePresence>
         {(isOpen || mobile) && (
           <motion.div
-            initial={mobile
-              ? { y: '100%', opacity: 0 }
-              : { x: 360, opacity: 0 }
-            }
-            animate={mobile
-              ? { y: 0, opacity: 1 }
-              : { x: 0, opacity: 1 }
-            }
-            exit={mobile
-              ? { y: '100%', opacity: 0 }
-              : { x: 360, opacity: 0 }
-            }
+            initial={mobile ? { y: '100%', opacity: 0 } : { x: 360, opacity: 0 }}
+            animate={mobile ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
+            exit={mobile ? { y: '100%', opacity: 0 } : { x: 360, opacity: 0 }}
             transition={{ type: 'spring', damping: 28, stiffness: 240 }}
             className="station-panel"
             style={{
@@ -171,11 +182,10 @@ export default function StationPanel({ onStationSelect, selectedStation }: Stati
               </div>
 
               {/* Line filter buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                {LINES.map(line => {
-                  const color    = LINE_COLORS[line.id];
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                {cityConfig.lines.map(line => {
+                  const color    = cityConfig.lineColors[line.id] || { primary: '#a855f7' };
                   const isActive = activeFilter === line.id;
-                  const label    = line.id === 'purple' ? 'Purple' : line.id === 'aqua' ? 'Aqua' : 'Line 3';
                   return (
                     <button
                       key={line.id}
@@ -184,7 +194,7 @@ export default function StationPanel({ onStationSelect, selectedStation }: Stati
                       style={{ opacity: isActive || activeFilter === 'all' ? 1 : 0.45 }}
                     >
                       <span className="line-dot" style={{ backgroundColor: color.primary }} />
-                      <span>{label}</span>
+                      <span>{line.name}</span>
                     </button>
                   );
                 })}
@@ -200,7 +210,7 @@ export default function StationPanel({ onStationSelect, selectedStation }: Stati
               style={{ flex: 1, overflowY: 'auto', padding: '6px 10px 16px' }}
             >
               {filteredStations.map(station => {
-                const color      = LINE_COLORS[station.line];
+                const color      = cityConfig.lineColors[station.line] || { primary: '#a855f7' };
                 const isSelected = selectedStation === station.id;
                 return (
                   <motion.button
@@ -228,10 +238,10 @@ export default function StationPanel({ onStationSelect, selectedStation }: Stati
                         {station.name}
                       </p>
                       <p style={{
-                        color: 'rgba(148,163,184,0.75)',
-                        fontSize: '12px',
-                        margin: 0,
+                        color: 'rgba(148,163,184,0.7)',
+                        fontSize: '11px',
                         lineHeight: 1.2,
+                        margin: '2px 0 0',
                       }}>
                         {station.lineName}
                       </p>
@@ -239,11 +249,6 @@ export default function StationPanel({ onStationSelect, selectedStation }: Stati
                   </motion.button>
                 );
               })}
-              {filteredStations.length === 0 && (
-                <div style={{ padding: '40px 16px', textAlign: 'center', color: 'rgba(148,163,184,0.5)', fontSize: '13px' }}>
-                  No stations found
-                </div>
-              )}
             </div>
           </motion.div>
         )}

@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Train } from 'lucide-react';
+import { CITY_CONFIGS, type CityConfig } from '../data/cityData';
 
 const getIsMobile = () => window.innerWidth < 640;
 
-export default function Header() {
+interface HeaderProps {
+  cityConfig?: CityConfig;
+}
+
+export default function Header({ cityConfig = CITY_CONFIGS.pune }: HeaderProps) {
   const [mobile, setMobile] = useState(getIsMobile);
   useEffect(() => {
     const handler = () => setMobile(getIsMobile());
@@ -52,28 +57,34 @@ export default function Header() {
             letterSpacing: '0.02em',
             whiteSpace: 'nowrap',
           }}>
-            Pune Metro{' '}
+            {cityConfig.name} Metro{' '}
             <span style={{ color: '#22d3ee' }}>3D</span>
           </h1>
           {/* Hide subtitle on very small screens */}
           {!mobile && (
             <p style={{ margin: 0, fontSize: '11px', lineHeight: 1, display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
-              <span style={{ color: '#c084fc', fontWeight: 500 }}>Purple</span>
-              <span style={{ color: 'rgba(148,163,184,0.5)', fontSize: '10px' }}>·</span>
-              <span style={{ color: '#22d3ee', fontWeight: 500 }}>Aqua</span>
-              <span style={{ color: 'rgba(148,163,184,0.5)', fontSize: '10px' }}>·</span>
-              <span style={{ color: '#f472b6', fontWeight: 500 }}>Line 3</span>
+              {cityConfig.lineColorsDef.map((l, idx) => (
+                <span key={l.name} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ color: l.color, fontWeight: 500 }}>{l.name}</span>
+                  {idx < cityConfig.lineColorsDef.length - 1 && (
+                    <span style={{ color: 'rgba(148,163,184,0.5)', fontSize: '10px' }}>·</span>
+                  )}
+                </span>
+              ))}
               <span style={{ color: 'rgba(148,163,184,0.5)', fontSize: '10px' }}>·</span>
               <span style={{ color: 'rgba(148,163,184,0.65)', fontWeight: 400 }}>interactive 3D map</span>
             </p>
           )}
           {mobile && (
             <p style={{ margin: 0, fontSize: '10px', lineHeight: 1, display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <span style={{ color: '#c084fc', fontWeight: 600 }}>P</span>
-              <span style={{ color: 'rgba(148,163,184,0.4)', fontSize: '9px' }}>·</span>
-              <span style={{ color: '#22d3ee', fontWeight: 600 }}>A</span>
-              <span style={{ color: 'rgba(148,163,184,0.4)', fontSize: '9px' }}>·</span>
-              <span style={{ color: '#f472b6', fontWeight: 600 }}>L3</span>
+              {cityConfig.lineColorsDef.map((l, idx) => (
+                <span key={l.name} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                  <span style={{ color: l.color, fontWeight: 600 }}>{l.name[0]}</span>
+                  {idx < cityConfig.lineColorsDef.length - 1 && (
+                    <span style={{ color: 'rgba(148,163,184,0.4)', fontSize: '9px' }}>·</span>
+                  )}
+                </span>
+              ))}
             </p>
           )}
         </div>

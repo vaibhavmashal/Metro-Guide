@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MapPin, ArrowRightLeft, Wifi, Car, Accessibility, Clock, Navigation } from 'lucide-react';
-import { STATIONS, LINES, LINE_COLORS } from '../data/metroData';
+import { CITY_CONFIGS, type CityConfig } from '../data/cityData';
 
 const getIsMobile = () => window.innerWidth < 640;
 
@@ -9,6 +9,7 @@ interface StationDetailProps {
   stationId: string | null;
   onClose: () => void;
   onNavigate: (stationId: string) => void;
+  cityConfig?: CityConfig;
 }
 
 const FACILITY_ICONS: Record<string, React.ReactNode> = {
@@ -37,7 +38,7 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
-export default function StationDetail({ stationId, onClose, onNavigate }: StationDetailProps) {
+export default function StationDetail({ stationId, onClose, onNavigate, cityConfig = CITY_CONFIGS.pune }: StationDetailProps) {
   const [mobile, setMobile] = useState(getIsMobile);
   useEffect(() => {
     const handler = () => setMobile(getIsMobile());
@@ -46,14 +47,14 @@ export default function StationDetail({ stationId, onClose, onNavigate }: Statio
   }, []);
 
   if (!stationId) return null;
-  const station = STATIONS[stationId];
+  const station = cityConfig.stations[stationId];
   if (!station) return null;
 
-  const line  = LINES.find(l => l.id === station.line);
-  const color = LINE_COLORS[station.line];
+  const line  = cityConfig.lines.find(l => l.id === station.line);
+  const color = cityConfig.lineColors[station.line] || { primary: '#a855f7', glow: '#c084fc', rgb: [168, 85, 247] };
 
   const connectedStations = station.connectedStations
-    .map(id => STATIONS[id])
+    .map(id => cityConfig.stations[id])
     .filter(Boolean);
 
   /* positions */
@@ -180,7 +181,7 @@ export default function StationDetail({ stationId, onClose, onNavigate }: Statio
               <ArrowRightLeft size={12} style={{ color: '#facc15', flexShrink: 0 }} />
               <span style={{ color: '#facc15', fontSize: '11px', fontWeight: 500 }}>
                 Interchange — {station.interchangeLines?.map(l =>
-                  LINES.find(li => li.id === l)?.name
+                  cityConfig.lines.find(li => li.id === l)?.name
                 ).join(', ')}
               </span>
             </div>
@@ -250,7 +251,8 @@ export default function StationDetail({ stationId, onClose, onNavigate }: Statio
               <SectionLabel>Connected Stations</SectionLabel>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {connectedStations.map(s => {
-                  const connectedLine = LINES.find(l => l.id === s.line);
+                  const connectedLine = cityConfig.lines.find(l => l.id === s.line);
+                  const sColor = cityConfig.lineColors[s.line] || { primary: '#a855f7', glow: '#c084fc' };
                   return (
                     <button
                       key={s.id}
@@ -276,9 +278,9 @@ export default function StationDetail({ stationId, onClose, onNavigate }: Statio
                         width: '8px',
                         height: '8px',
                         borderRadius: '50%',
-                        backgroundColor: LINE_COLORS[s.line].primary,
+                        backgroundColor: sColor.primary,
                         flexShrink: 0,
-                        boxShadow: `0 0 6px ${LINE_COLORS[s.line].primary}80`,
+                        boxShadow: `0 0 6px ${sColor.primary}80`,
                       }} />
                       {/* Station name */}
                       <span style={{
@@ -292,7 +294,7 @@ export default function StationDetail({ stationId, onClose, onNavigate }: Statio
                       {/* Line badge */}
                       <span style={{
                         fontSize: '10px',
-                        color: LINE_COLORS[s.line].glow,
+                        color: sColor.glow,
                         fontWeight: 500,
                         flexShrink: 0,
                       }}>

@@ -1,15 +1,16 @@
 // ============================================================
 // Pathfinding — Dijkstra's Algorithm for Metro Route
+// City-agnostic: works with any station map
 // ============================================================
 
-import { STATIONS, haversineDistance, METRO_AVG_SPEED_KMH, type MetroLine } from '../data/metroData';
+import { haversineDistance, METRO_AVG_SPEED_KMH, type Station } from '../data/metroData';
 
 export interface RouteResult {
-  path: string[]; // station IDs in order
-  totalDistance: number; // km
-  estimatedTime: number; // minutes
-  interchanges: string[]; // station IDs where line changes
-  lineSegments: { line: MetroLine; stations: string[] }[];
+  path: string[];           // station IDs in order
+  totalDistance: number;    // km
+  estimatedTime: number;    // minutes
+  interchanges: string[];   // station IDs where line changes
+  lineSegments: { line: string; stations: string[] }[];
 }
 
 interface DijkstraNode {
@@ -18,10 +19,15 @@ interface DijkstraNode {
   previous: string | null;
 }
 
-export function findRoute(sourceId: string, destId: string): RouteResult | null {
-  const source = STATIONS[sourceId];
-  const dest = STATIONS[destId];
+export function findRoute(
+  sourceId: string,
+  destId: string,
+  stations: Record<string, Station>
+): RouteResult | null {
+  const source = stations[sourceId];
+  const dest   = stations[destId];
   if (!source || !dest) return null;
+
   if (sourceId === destId) {
     return {
       path: [sourceId],
@@ -32,16 +38,12 @@ export function findRoute(sourceId: string, destId: string): RouteResult | null 
     };
   }
 
-  // Initialize
+  // Initialize Dijkstra nodes
   const nodes: Record<string, DijkstraNode> = {};
   const visited = new Set<string>();
 
-  for (const id of Object.keys(STATIONS)) {
-    nodes[id] = {
-      id,
-      distance: id === sourceId ? 0 : Infinity,
-      previous: null,
-    };
+  for (const id of Object.keys(stations)) {
+    nodes[id] = { id, distance: id === sourceId ? 0 : Infinity, previous: null };
   }
 
   while (true) {
@@ -56,11 +58,11 @@ export function findRoute(sourceId: string, destId: string): RouteResult | null 
     if (!current || current.distance === Infinity || current.id === destId) break;
 
     visited.add(current.id);
-    const currentStation = STATIONS[current.id];
+    const currentStation = stations[current.id];
 
     for (const neighborId of currentStation.connectedStations) {
       if (visited.has(neighborId)) continue;
-      const neighbor = STATIONS[neighborId];
+      const neighbor = stations[neighborId];
       if (!neighbor) continue;
 
       const dist = haversineDistance(
@@ -68,7 +70,7 @@ export function findRoute(sourceId: string, destId: string): RouteResult | null 
         neighbor.lat, neighbor.lng
       );
 
-      // Add small penalty for line changes to prefer staying on same line
+      // Small penalty for line changes — prefer staying on same line
       const linePenalty = currentStation.line !== neighbor.line ? 0.5 : 0;
       const newDist = current.distance + dist + linePenalty;
 
@@ -84,40 +86,35 @@ export function findRoute(sourceId: string, destId: string): RouteResult | null 
   let currentId: string | null = destId;
   while (currentId) {
     path.unshift(currentId);
-    currentId = nodes[currentId].previous;
+    currentId = nodes[currentId]?.previous ?? null;
   }
 
-  if (path[0] !== sourceId) return null; // No route found
+  if (path[0] !== sourceId) return null;
 
   // Calculate total distance
   let totalDistance = 0;
   for (let i = 1; i < path.length; i++) {
-    const s1 = STATIONS[path[i - 1]];
-    const s2 = STATIONS[path[i]];
+    const s1 = stations[path[i - 1]];
+    const s2 = stations[path[i]];
     totalDistance += haversineDistance(s1.lat, s1.lng, s2.lat, s2.lng);
   }
 
   // Find interchanges
   const interchanges: string[] = [];
   for (let i = 1; i < path.length; i++) {
-    const prev = STATIONS[path[i - 1]];
-    const curr = STATIONS[path[i]];
-    if (prev.line !== curr.line) {
+    if (stations[path[i - 1]].line !== stations[path[i]].line) {
       interchanges.push(path[i - 1]);
     }
   }
 
   // Build line segments
-  const lineSegments: { line: MetroLine; stations: string[] }[] = [];
-  let currentSegment: { line: MetroLine; stations: string[] } | null = null;
+  const lineSegments: { line: string; stations: string[] }[] = [];
+  let currentSegment: { line: string; stations: string[] } | null = null;
 
   for (const stationId of path) {
-    const station = STATIONS[stationId];
+    const station = stations[stationId];
     if (!currentSegment || currentSegment.line !== station.line) {
-      if (currentSegment) {
-        // Add the interchange station to both segments
-        currentSegment.stations.push(stationId);
-      }
+      if (currentSegment) currentSegment.stations.push(stationId);
       currentSegment = { line: station.line, stations: [stationId] };
       lineSegments.push(currentSegment);
     } else {
@@ -125,7 +122,6 @@ export function findRoute(sourceId: string, destId: string): RouteResult | null 
     }
   }
 
-  // Estimated time
   const estimatedTime = (totalDistance / METRO_AVG_SPEED_KMH) * 60 + interchanges.length * 5;
 
   return {

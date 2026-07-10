@@ -12,6 +12,8 @@ import SettingsPanel from './components/SettingsPanel';
 import RoutePlanner from './components/RoutePlanner';
 import MapControls from './components/MapControls';
 import LoadingScreen from './components/LoadingScreen';
+import CitySelector from './components/CitySelector';
+import { CITY_CONFIGS, type CityId } from './data/cityData';
 import { DEFAULT_SCENE_SETTINGS, type SceneSettings } from './utils/mapStyles';
 import type { RouteResult } from './utils/pathfinding';
 
@@ -31,6 +33,7 @@ function useIsMobile() {
 type MobileTab = 'map' | 'stations' | 'route';
 
 function App() {
+  const [selectedCity, setSelectedCity] = useState<CityId>('pune');
   const [isLoading, setIsLoading]       = useState(true);
   const [mapStyle, setMapStyle]         = useState('dark');
   const [settings, setSettings]         = useState<SceneSettings>({ ...DEFAULT_SCENE_SETTINGS });
@@ -43,6 +46,13 @@ function App() {
 
   const isMobile = useIsMobile();
   const mapRef   = useRef<MetroMapHandle>(null);
+  const cityConfig = CITY_CONFIGS[selectedCity];
+
+  const handleCityChange = useCallback((newCity: CityId) => {
+    setSelectedCity(newCity);
+    setSelectedStation(null);
+    setDetailStation(null);
+  }, []);
 
   const handleMapReady = useCallback((map: maplibregl.Map) => {
     setMapInstance(map);
@@ -105,13 +115,17 @@ function App() {
         selectedStation={selectedStation}
         onStationClick={handleStationClick}
         onMapReady={handleMapReady}
+        cityConfig={cityConfig}
       />
 
       {/* UI Overlays */}
       {!isLoading && (
         <>
           {/* ── Header (always visible) ── */}
-          <Header />
+          <Header cityConfig={cityConfig} />
+
+          {/* ── City Selector (always visible) ── */}
+          <CitySelector currentCity={selectedCity} onCityChange={handleCityChange} />
 
           {/* ── Desktop-only overlays ── */}
           {!isMobile && (
@@ -120,12 +134,14 @@ function App() {
               <RoutePlanner
                 onRouteCalculated={handleRouteCalculated}
                 onStationFocus={handleNavigateStation}
+                cityConfig={cityConfig}
               />
 
               {/* Right: Station list panel */}
               <StationPanel
                 onStationSelect={handleStationSelect}
                 selectedStation={selectedStation}
+                cityConfig={cityConfig}
               />
 
               {/* Bottom-left: Station detail */}
@@ -133,6 +149,7 @@ function App() {
                 stationId={detailStation}
                 onClose={handleCloseDetail}
                 onNavigate={handleNavigateStation}
+                cityConfig={cityConfig}
               />
 
               {/* Bottom-left FABs */}
@@ -171,6 +188,7 @@ function App() {
                 <StationPanel
                   onStationSelect={handleStationSelect}
                   selectedStation={selectedStation}
+                  cityConfig={cityConfig}
                 />
               )}
 
@@ -179,6 +197,7 @@ function App() {
                 <RoutePlanner
                   onRouteCalculated={handleRouteCalculated}
                   onStationFocus={handleNavigateStation}
+                  cityConfig={cityConfig}
                 />
               )}
 
@@ -188,6 +207,7 @@ function App() {
                   stationId={detailStation}
                   onClose={handleCloseDetail}
                   onNavigate={handleNavigateStation}
+                  cityConfig={cityConfig}
                 />
               )}
 
