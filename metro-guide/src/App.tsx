@@ -13,6 +13,7 @@ import RoutePlanner from './components/RoutePlanner';
 import MapControls from './components/MapControls';
 import LoadingScreen from './components/LoadingScreen';
 import CitySelector from './components/CitySelector';
+import ChatPanel from './components/ChatPanel';
 import { CITY_CONFIGS, type CityId } from './data/cityData';
 import { DEFAULT_SCENE_SETTINGS, type SceneSettings } from './utils/mapStyles';
 import type { RouteResult } from './utils/pathfinding';
@@ -126,6 +127,9 @@ function App() {
 
           {/* ── City Selector (always visible) ── */}
           <CitySelector currentCity={selectedCity} onCityChange={handleCityChange} />
+
+          {/* ── AI Chatbot Assistant Panel ── */}
+          <ChatPanel cityConfig={cityConfig} isMobile={isMobile} />
 
           {/* ── Desktop-only overlays ── */}
           {!isMobile && (
