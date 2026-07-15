@@ -16,7 +16,10 @@ interface ChatPanelProps {
   isMobile?: boolean;
 }
 
-const DEFAULT_SUGGESTIONS = [
+const DEFAULT_SUGGESTIONS: string[] = [
+  "Show metro route between stations",
+  "Check timings and train frequency",
+  "What facilities are available at stations?"
 ];
 
 export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelProps) {
