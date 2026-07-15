@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, Sparkles, Send, X, Loader2, Trash2, MessageSquare } from 'lucide-react';
 import { type CityConfig } from '../data/cityData';
+import { FormattedMessage } from './FormattedMessage';
 
 interface ChatMessage {
   id: string;
@@ -16,10 +17,6 @@ interface ChatPanelProps {
 }
 
 const DEFAULT_SUGGESTIONS = [
-  "Quickest route from Vanaz to Civil Court?",
-  "What are Pune Metro operating timings?",
-  "Tell me about interchange stations",
-  "How much is the fare between lines?"
 ];
 
 export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelProps) {
@@ -202,14 +199,6 @@ export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelPro
                     </h3>
                     <Sparkles size={13} style={{ color: '#c084fc' }} />
                   </div>
-                  <p style={{
-                    color: '#94a3b8',
-                    fontSize: '11px',
-                    margin: 0,
-                    fontWeight: 500
-                  }}>
-                    Powered by Gemini 2.5
-                  </p>
                 </div>
               </div>
 
@@ -306,11 +295,9 @@ export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelPro
                       boxShadow: msg.sender === 'user'
                         ? '0 4px 14px rgba(124, 58, 237, 0.3)'
                         : '0 2px 8px rgba(0,0,0,0.2)',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
                     }}
                   >
-                    {msg.text}
+                    <FormattedMessage text={msg.text} isUser={msg.sender === 'user'} />
                   </div>
                   <span style={{
                     fontSize: '10px',

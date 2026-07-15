@@ -205,15 +205,6 @@ function App() {
                 />
               )}
 
-              {/* Station detail — bottom sheet (when station clicked on map) */}
-              {activeTab === 'map' && (
-                <StationDetail
-                  stationId={detailStation}
-                  onClose={handleCloseDetail}
-                  onNavigate={handleNavigateStation}
-                  cityConfig={cityConfig}
-                />
-              )}
 
               {/* Bottom nav bar */}
               <nav className="mobile-nav-bar">

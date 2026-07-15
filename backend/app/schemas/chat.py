@@ -8,6 +8,10 @@ class ChatRequest(BaseModel):
         max_length=5000,
         description="User message"
     )
+    session_id: str | None = Field(
+        default="default_session",
+        description="Optional conversation session ID for history tracking"
+    )
 
 
 class ChatResponse(BaseModel):

@@ -46,6 +46,7 @@ export default function StationDetail({ stationId, onClose, onNavigate, cityConf
     return () => window.removeEventListener('resize', handler);
   }, []);
 
+  if (mobile) return null;
   if (!stationId) return null;
   const station = cityConfig.stations[stationId];
   if (!station) return null;
