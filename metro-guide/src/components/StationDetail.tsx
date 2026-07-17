@@ -84,19 +84,23 @@ export default function StationDetail({ stationId, onClose, onNavigate, cityConf
           borderRadius: mobile ? '20px 20px 0 0' : '18px',
           boxShadow: '0 20px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08)',
           overflow: 'hidden',
+          maxHeight: mobile ? '75vh' : 'calc(100vh - 120px)',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         {/* Mobile drag handle */}
-        {mobile && <div className="bottom-sheet-handle" style={{ marginTop: '10px', marginBottom: '4px' }} />}
+        {mobile && <div className="bottom-sheet-handle" style={{ marginTop: '10px', marginBottom: '4px', flexShrink: 0 }} />}
 
         {/* ── Top color bar ── */}
         <div style={{
           height: '3px',
           width: '100%',
           background: `linear-gradient(90deg, ${color.primary}, ${color.glow})`,
+          flexShrink: 0,
         }} />
 
-        <div style={{ padding: '16px' }}>
+        <div className="custom-scrollbar" style={{ padding: '16px', overflowY: 'auto', flex: 1, minHeight: 0 }}>
 
           {/* ── Header: dot + name + close ── */}
           <div style={{

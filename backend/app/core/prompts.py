@@ -383,3 +383,40 @@ Every response should be:
 
 Always aim to provide the most useful travel assistance possible while keeping responses organized and easy to follow.
 """
+
+
+JOURNEY_SUMMARY_PROMPT = """You are Metro AI, generating a concise, friendly, and multi-modal journey guide for a metro traveler.
+
+Given the following computed route data, write a natural and conversational response as if you were a helpful metro assistant guiding the user. Use emoji sparingly. Keep it concise.
+
+**Journey Details:**
+- From: {source_name}
+- To: {dest_name}
+- First Mile to {source_station_name} Metro Station ({source_walk_meters}m distance):
+  • Walking: ~{source_walk_minutes} min
+  • Auto/Bike/Cab: ~{source_auto_minutes} min ({source_auto_fare})
+  • PMPML Bus / Feeder: ~{source_bus_minutes} min ({source_bus_fare})
+- Last Mile from {dest_station_name} Metro Station to {dest_name} ({dest_walk_meters}m distance):
+  • Walking: ~{dest_walk_minutes} min
+  • Auto/Bike/Cab: ~{dest_auto_minutes} min ({dest_auto_fare})
+  • PMPML Bus / Feeder: ~{dest_bus_minutes} min ({dest_bus_fare})
+
+**Metro Route:**
+{route_description}
+
+**Interchanges:** {interchange_info}
+**Total Stations:** {total_stations}
+**Metro Ride Duration:** ~{metro_time} minutes
+
+Write a clear, step-by-step journey guide. CRITICAL REQUIREMENT: Since our primary goal is metro-specific guidance and user convenience, DO NOT assume the user will walk long distances to or from the metro station! In Step 1 (reaching the metro station) and the last step (exiting to the destination), clearly present all available transport options (Walking, Auto/Bike/Cab, and PMPML Bus) with their times and fares so the user can choose how they want to reach the metro station based on their convenience.
+
+Include:
+1. **First Mile to {source_station_name} Metro Station:** Present the options clearly (e.g. "To reach **{source_station_name}** from **{source_name}** ({source_walk_meters}m), you can walk (~**{source_walk_minutes} min**), take an Auto/Bike (~**{source_auto_minutes} min**, {source_auto_fare}), or catch a PMPML Bus (~**{source_bus_minutes} min**, {source_bus_fare}).")
+2. **Boarding the Metro:** Mention the line name, boarding station, and direction towards destination.
+3. **Interchanges (if any):** Mention station name and line change.
+4. **Exiting the Metro:** Mention exiting at **{dest_station_name}**.
+5. **Last Mile to {dest_name}:** Present the options clearly (e.g. "From **{dest_station_name}** to **{dest_name}** ({dest_walk_meters}m), choose your preferred mode: walk (~**{dest_walk_minutes} min**), Auto/Bike (~**{dest_auto_minutes} min**, {dest_auto_fare}), or PMPML Bus (~**{dest_bus_minutes} min**, {dest_bus_fare}).")
+
+Keep the response concise, practical, and well-formatted. Use markdown bold for station names, travel modes, and times. Never truncate your response.
+"""
+

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, RotateCcw } from 'lucide-react';
+import { Settings, RotateCcw, X } from 'lucide-react';
 import {
   type SceneSettings,
   DEFAULT_SCENE_SETTINGS,
@@ -79,8 +79,39 @@ export default function SettingsPanel({ settings, onSettingsChange }: SettingsPa
               boxShadow: '0 20px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08)',
               padding: '18px',
               marginBottom: '6px',
+              position: 'relative',
             }}
           >
+            {/* ── Close button ── */}
+            <button
+              onClick={() => setIsOpen(false)}
+              title="Close"
+              style={{
+                position: 'absolute',
+                top: '14px',
+                right: '14px',
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(148,163,184,0.8)',
+                cursor: 'pointer',
+                padding: '4px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'background 0.15s, color 0.15s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                e.currentTarget.style.color = '#fff';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'rgba(148,163,184,0.8)';
+              }}
+            >
+              <X size={15} />
+            </button>
 
             {/* ── LIGHTING ── */}
             <SectionHeading>Lighting</SectionHeading>

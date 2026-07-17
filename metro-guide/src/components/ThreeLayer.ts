@@ -188,6 +188,26 @@ export function createThreeLayer(
       const colorObj = cityConfig.lineColors[station.line] || { primary: '#a855f7' };
       const primaryColor = new THREE.Color(colorObj.primary);
 
+      // Find the track direction angle for this station from routeCoordinates
+      const coords = cityConfig.routeCoordinates[station.line] || [];
+      let trackAngle = 0;
+      if (coords.length >= 2) {
+        let minDist = Infinity;
+        for (let i = 0; i < coords.length - 1; i++) {
+          const [lng1, lat1] = coords[i];
+          const [lng2, lat2] = coords[i + 1];
+          const midLng = (lng1 + lng2) / 2;
+          const midLat = (lat1 + lat2) / 2;
+          const dist = Math.hypot(midLng - station.lng, midLat - station.lat);
+          if (dist < minDist) {
+            minDist = dist;
+            const c1 = maplibregl.MercatorCoordinate.fromLngLat([lng1, lat1], stationAltitude);
+            const c2 = maplibregl.MercatorCoordinate.fromLngLat([lng2, lat2], stationAltitude);
+            trackAngle = Math.atan2(c2.y - c1.y, c2.x - c1.x);
+          }
+        }
+      }
+
       const length = 95 * meterScale * stationScale;
       const width = 18 * meterScale * stationScale;
       const height = 10 * meterScale * stationScale;
@@ -203,6 +223,7 @@ export function createThreeLayer(
       });
       const stationBox = new THREE.Mesh(boxGeo, boxMat);
       stationBox.position.set(coord.x, coord.y, coord.z);
+      stationBox.rotation.z = trackAngle;
       group.add(stationBox);
 
       // Top roof edge accent
@@ -214,6 +235,7 @@ export function createThreeLayer(
       });
       const roof = new THREE.Mesh(roofGeo, roofMat);
       roof.position.set(coord.x, coord.y, coord.z + height / 2);
+      roof.rotation.z = trackAngle;
       group.add(roof);
 
       // Support pillars
@@ -223,7 +245,12 @@ export function createThreeLayer(
       });
       for (const offset of [-length * 0.28, length * 0.28]) {
         const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-        pillar.position.set(coord.x + offset, coord.y, (stationAltitude * meterScale) / 2);
+        pillar.position.set(
+          coord.x + offset * Math.cos(trackAngle),
+          coord.y + offset * Math.sin(trackAngle),
+          (stationAltitude * meterScale) / 2
+        );
+        pillar.rotation.z = trackAngle;
         group.add(pillar);
       }
     });

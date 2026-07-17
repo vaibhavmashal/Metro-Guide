@@ -1,0 +1,789 @@
+[
+  {
+    "id": "pcmc",
+    "name": "PCMC",
+    "line": "purple",
+    "latitude": 18.6281,
+    "longitude": 73.7963,
+    "sequence": 1,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "sant_tukaram_nagar"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms",
+      "Lift"
+    ],
+    "nearby_places": [
+      "PCMC Building",
+      "Pimpri Chinchwad Municipal Corporation",
+      "Vallabh Nagar"
+    ]
+  },
+  {
+    "id": "sant_tukaram_nagar",
+    "name": "Sant Tukaram Nagar (Nashik Phata)",
+    "line": "purple",
+    "latitude": 18.6146,
+    "longitude": 73.8158,
+    "sequence": 2,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "pcmc",
+      "bhosari"
+    ],
+    "opening_status": "operational",
+    "parking": false,
+    "facilities": [
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Nashik Phata",
+      "Sant Tukaram Nagar",
+      "Sant Tukaram Temple",
+      "YCM Hospital"
+    ]
+  },
+  {
+    "id": "bhosari",
+    "name": "Bhosari (Nashik Phata)",
+    "line": "purple",
+    "latitude": 18.6096,
+    "longitude": 73.8195,
+    "sequence": 3,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "sant_tukaram_nagar",
+      "kasarwadi"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Bhosari Industrial Area",
+      "Nashik Phata",
+      "Market"
+    ]
+  },
+  {
+    "id": "kasarwadi",
+    "name": "Kasarwadi",
+    "line": "purple",
+    "latitude": 18.5997,
+    "longitude": 73.8273,
+    "sequence": 4,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "bhosari",
+      "phugewadi"
+    ],
+    "opening_status": "operational",
+    "parking": false,
+    "facilities": [
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Kasarwadi Railway Station",
+      "Kasarwadi Bridge",
+      "Industrial Zone"
+    ]
+  },
+  {
+    "id": "phugewadi",
+    "name": "Phugewadi",
+    "line": "purple",
+    "latitude": 18.59,
+    "longitude": 73.831,
+    "sequence": 5,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "kasarwadi",
+      "dapodi"
+    ],
+    "opening_status": "operational",
+    "parking": false,
+    "facilities": [
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Phugewadi",
+      "Pudghewadi",
+      "MegaMart Area",
+      "Residential Area"
+    ]
+  },
+  {
+    "id": "dapodi",
+    "name": "Dapodi",
+    "line": "purple",
+    "latitude": 18.5838,
+    "longitude": 73.8338,
+    "sequence": 6,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "phugewadi",
+      "bopodi"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Dapodi Railway Station",
+      "Dapodi Market",
+      "CME Pune"
+    ]
+  },
+  {
+    "id": "bopodi",
+    "name": "Bopodi",
+    "line": "purple",
+    "latitude": 18.5697,
+    "longitude": 73.8381,
+    "sequence": 7,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "dapodi",
+      "khadki"
+    ],
+    "opening_status": "operational",
+    "parking": false,
+    "facilities": [
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Bopodi",
+      "Khadki Railway Station area"
+    ]
+  },
+  {
+    "id": "khadki",
+    "name": "Khadki",
+    "line": "purple",
+    "latitude": 18.5635,
+    "longitude": 73.842,
+    "sequence": 8,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "bopodi",
+      "shivajinagar"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Khadki Cantonment",
+      "Ordnance Factory",
+      "Khadki Bazaar"
+    ]
+  },
+  {
+    "id": "shivajinagar",
+    "name": "Shivajinagar",
+    "line": "purple",
+    "latitude": 18.5328,
+    "longitude": 73.8494,
+    "sequence": 9,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "khadki",
+      "civil_court"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms",
+      "Lift",
+      "Escalator"
+    ],
+    "nearby_places": [
+      "Shivajinagar Railway Station",
+      "Shivajinagar ST Bus Depot",
+      "COEP",
+      "Sancheti Hospital"
+    ]
+  },
+  {
+    "id": "civil_court",
+    "name": "District Court (Civil Court)",
+    "line": "purple",
+    "latitude": 18.5269,
+    "longitude": 73.8581,
+    "sequence": 10,
+    "interchange": true,
+    "interchange_lines": [
+      "aqua"
+    ],
+    "connected_stations": [
+      "shivajinagar",
+      "budhwar_peth",
+      "civil_court_aqua"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms",
+      "Lift",
+      "Escalator",
+      "Food Court"
+    ],
+    "nearby_places": [
+      "District Court",
+      "Shivajinagar District Court",
+      "Civil Court",
+      "Kamgar Putala",
+      "PMC Main Office"
+    ]
+  },
+  {
+    "id": "budhwar_peth",
+    "name": "Kasba Peth (Budhwar Peth)",
+    "line": "purple",
+    "latitude": 18.5211,
+    "longitude": 73.8594,
+    "sequence": 11,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "civil_court",
+      "mandai"
+    ],
+    "opening_status": "operational",
+    "parking": false,
+    "facilities": [
+      "Ticket Counter",
+      "Restrooms",
+      "Lift"
+    ],
+    "nearby_places": [
+      "Kasba Peth",
+      "Budhwar Peth",
+      "Shaniwar Wada",
+      "Appa Balwant Chowk",
+      "Dagdusheth Halwai Ganpati"
+    ]
+  },
+  {
+    "id": "mandai",
+    "name": "Mahatma Phule Mandai",
+    "line": "purple",
+    "latitude": 18.5143,
+    "longitude": 73.8574,
+    "sequence": 12,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "budhwar_peth",
+      "swargate"
+    ],
+    "opening_status": "operational",
+    "parking": false,
+    "facilities": [
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Mahatma Phule Mandai",
+      "Mandai",
+      "Tulshibaug Market",
+      "Raja Dinkar Kelkar Museum"
+    ]
+  },
+  {
+    "id": "swargate",
+    "name": "Swargate",
+    "line": "purple",
+    "latitude": 18.5018,
+    "longitude": 73.8583,
+    "sequence": 13,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "mandai"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms",
+      "Lift",
+      "Escalator"
+    ],
+    "nearby_places": [
+      "Swargate Bus Stand",
+      "Swargate ST Depot",
+      "Saras Baug",
+      "Parvati Hill"
+    ]
+  },
+  {
+    "id": "vanaz",
+    "name": "Vanaz",
+    "line": "aqua",
+    "latitude": 18.5071,
+    "longitude": 73.8053,
+    "sequence": 1,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "anand_nagar"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Vanaz Corner",
+      "Paud Road",
+      "Kothrud Depot",
+      "Kinara Hotel area"
+    ]
+  },
+  {
+    "id": "anand_nagar",
+    "name": "Anand Nagar",
+    "line": "aqua",
+    "latitude": 18.5096,
+    "longitude": 73.8141,
+    "sequence": 2,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "vanaz",
+      "ideal_colony"
+    ],
+    "opening_status": "operational",
+    "parking": false,
+    "facilities": [
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Anand Nagar Kothrud",
+      "Anad Nagar",
+      "Paud Road",
+      "Ideal Colony border"
+    ]
+  },
+  {
+    "id": "ideal_colony",
+    "name": "Paud Phata",
+    "line": "aqua",
+    "latitude": 18.5084,
+    "longitude": 73.8228,
+    "sequence": 3,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "anand_nagar",
+      "nal_stop"
+    ],
+    "opening_status": "operational",
+    "parking": false,
+    "facilities": [
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Ideal Colony",
+      "Paud Phata",
+      "Kothrud",
+      "MIT College Road"
+    ]
+  },
+  {
+    "id": "nal_stop",
+    "name": "SNDT College (Nal Stop)",
+    "line": "aqua",
+    "latitude": 18.5073,
+    "longitude": 73.8287,
+    "sequence": 4,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "ideal_colony",
+      "garware_college"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "SNDT College",
+      "Nal Stop",
+      "Law College Road",
+      "Erandwane",
+      "Siddhant Towers Kothrud"
+    ]
+  },
+  {
+    "id": "garware_college",
+    "name": "Garware College",
+    "line": "aqua",
+    "latitude": 18.512,
+    "longitude": 73.838,
+    "sequence": 5,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "nal_stop",
+      "deccan_gymkhana"
+    ],
+    "opening_status": "operational",
+    "parking": false,
+    "facilities": [
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Garware College",
+      "Karve Road",
+      "Prabhat Road",
+      "Khilarewadi"
+    ]
+  },
+  {
+    "id": "deccan_gymkhana",
+    "name": "Deccan Gymkhana",
+    "line": "aqua",
+    "latitude": 18.5163,
+    "longitude": 73.8445,
+    "sequence": 6,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "garware_college",
+      "chhatrapati_sambhaji_udyan"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Deccan Gymkhana",
+      "FC Road",
+      "Fergusson College Road",
+      "JM Road",
+      "Goodluck Cafe"
+    ]
+  },
+  {
+    "id": "chhatrapati_sambhaji_udyan",
+    "name": "Chhatrapati Sambhaji Udyan",
+    "line": "aqua",
+    "latitude": 18.5201,
+    "longitude": 73.8476,
+    "sequence": 7,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "deccan_gymkhana",
+      "pmcc"
+    ],
+    "opening_status": "operational",
+    "parking": false,
+    "facilities": [
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Chhatrapati Sambhaji Udyan",
+      "Chatrapati Sambhaji Park",
+      "JM Road",
+      "Bal Gandharva"
+    ]
+  },
+  {
+    "id": "pmcc",
+    "name": "PMC (Pune Municipal Corporation)",
+    "line": "aqua",
+    "latitude": 18.5227,
+    "longitude": 73.8535,
+    "sequence": 8,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "chhatrapati_sambhaji_udyan",
+      "civil_court_aqua"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms",
+      "Lift"
+    ],
+    "nearby_places": [
+      "PMC",
+      "Pune Municipal Corporation",
+      "Mutha River",
+      "Kasba Peth border"
+    ]
+  },
+  {
+    "id": "civil_court_aqua",
+    "name": "District Court (Civil Court)",
+    "line": "aqua",
+    "latitude": 18.5269,
+    "longitude": 73.8581,
+    "sequence": 9,
+    "interchange": true,
+    "interchange_lines": [
+      "purple"
+    ],
+    "connected_stations": [
+      "pmcc",
+      "mangalwar_peth",
+      "civil_court"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms",
+      "Lift",
+      "Escalator"
+    ],
+    "nearby_places": [
+      "District Court",
+      "Shivajinagar District Court",
+      "Civil Court Aqua",
+      "Kamgar Putala"
+    ]
+  },
+  {
+    "id": "mangalwar_peth",
+    "name": "RTO Pune (Mangalwar Peth)",
+    "line": "aqua",
+    "latitude": 18.53,
+    "longitude": 73.8652,
+    "sequence": 10,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "civil_court_aqua",
+      "pune_railway_station"
+    ],
+    "opening_status": "operational",
+    "parking": false,
+    "facilities": [
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "RTO Pune",
+      "Mangalwar Peth",
+      "Sangamwadi Bridge",
+      "COEP Hostel"
+    ]
+  },
+  {
+    "id": "pune_railway_station",
+    "name": "Pune Railway Station",
+    "line": "aqua",
+    "latitude": 18.5297,
+    "longitude": 73.8726,
+    "sequence": 11,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "mangalwar_peth",
+      "ruby_hall"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms",
+      "Lift",
+      "Escalator"
+    ],
+    "nearby_places": [
+      "Pune Railway Station",
+      "Pune Junction",
+      "Sasson General Hospital",
+      "Collector Office"
+    ]
+  },
+  {
+    "id": "ruby_hall",
+    "name": "Ruby Hall Clinic",
+    "line": "aqua",
+    "latitude": 18.5326,
+    "longitude": 73.8778,
+    "sequence": 12,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "pune_railway_station",
+      "bund_garden"
+    ],
+    "opening_status": "operational",
+    "parking": false,
+    "facilities": [
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Ruby Hall Clinic",
+      "Jehangir Hospital",
+      "Dhole Patil Road",
+      "Wadia College"
+    ]
+  },
+  {
+    "id": "bund_garden",
+    "name": "Bund Garden",
+    "line": "aqua",
+    "latitude": 18.5406,
+    "longitude": 73.8834,
+    "sequence": 13,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "ruby_hall",
+      "yerawada"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Bund Garden",
+      "Boat Club Road",
+      "Koregaon Park border",
+      "Fitzgerald Bridge"
+    ]
+  },
+  {
+    "id": "yerawada",
+    "name": "Yerawada",
+    "line": "aqua",
+    "latitude": 18.5454,
+    "longitude": 73.8867,
+    "sequence": 14,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "bund_garden",
+      "kalyani_nagar"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Yerawada",
+      "Yerwada",
+      "Aga Khan Palace",
+      "Business Bay",
+      "Golf Course"
+    ]
+  },
+  {
+    "id": "kalyani_nagar",
+    "name": "Kalyani Nagar",
+    "line": "aqua",
+    "latitude": 18.5444,
+    "longitude": 73.9057,
+    "sequence": 15,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "yerawada",
+      "ramwadi"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms"
+    ],
+    "nearby_places": [
+      "Kalyani Nagar",
+      "Trump Towers",
+      "Bishop School",
+      "Shastri Nagar"
+    ]
+  },
+  {
+    "id": "ramwadi",
+    "name": "Ramwadi",
+    "line": "aqua",
+    "latitude": 18.5571,
+    "longitude": 73.9097,
+    "sequence": 16,
+    "interchange": false,
+    "interchange_lines": [],
+    "connected_stations": [
+      "kalyani_nagar"
+    ],
+    "opening_status": "operational",
+    "parking": true,
+    "facilities": [
+      "Parking",
+      "Ticket Counter",
+      "Restrooms",
+      "Lift"
+    ],
+    "nearby_places": [
+      "Ramwadi",
+      "Viman Nagar",
+      "Phoenix Marketcity",
+      "Pune Airport feeder",
+      "Nagar Road"
+    ]
+  }
+]

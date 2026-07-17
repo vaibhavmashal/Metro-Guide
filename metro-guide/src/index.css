@@ -521,3 +521,32 @@ input[type="range"]::-moz-range-progress {
     opacity: 0.95;
   }
 }
+
+/* =====================================================
+   Journey Planner — Pick-on-Map Pulse
+   ===================================================== */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Animate-spin utility (for Loader2 icon) */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Journey marker animations */
+.journey-marker-source,
+.journey-marker-dest {
+  transition: transform 0.2s ease;
+}
+
+.journey-marker-source:hover,
+.journey-marker-dest:hover {
+  transform: scale(1.3);
+}

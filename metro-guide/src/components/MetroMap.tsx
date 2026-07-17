@@ -3,12 +3,15 @@ import maplibregl from 'maplibre-gl';
 import { CITY_CONFIGS, type CityConfig } from '../data/cityData';
 import { MAP_STYLES, LIGHTING_PRESETS, type SceneSettings } from '../utils/mapStyles';
 import type { RouteResult } from '../utils/pathfinding';
+import type { JourneyResult } from '../utils/journeyApi';
 import { createThreeLayer } from './ThreeLayer';
 
 export interface MetroMapHandle {
   getMap: () => maplibregl.Map | null;
   flyToStation: (stationId: string) => void;
   highlightRoute: (route: RouteResult | null) => void;
+  showJourney: (journey: JourneyResult | null) => void;
+  clearJourney: () => void;
 }
 
 interface MetroMapProps {
@@ -26,12 +29,110 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
     const mapRef = useRef<maplibregl.Map | null>(null);
     const animFrameRef = useRef<number>(0);
     const trainMarkersRef = useRef<maplibregl.Marker[]>([]);
+    const journeyMarkersRef = useRef<maplibregl.Marker[]>([]);
     const layersAddedRef = useRef(false);
     const prevStyleRef = useRef(mapStyle);
     const cityConfigRef = useRef(cityConfig);
     const prevCityIdRef = useRef(cityConfig.id);
 
     cityConfigRef.current = cityConfig;
+
+    // ── Journey visualization helpers ──
+    const clearJourneyLayers = useCallback(() => {
+      const map = mapRef.current;
+      if (!map) return;
+      // Remove walking route layers
+      ['journey-walk-src', 'journey-walk-dest', 'journey-walk-src-dash', 'journey-walk-dest-dash',
+       'journey-metro-route', 'journey-metro-glow'].forEach(id => {
+        if (map.getLayer(id)) map.removeLayer(id);
+      });
+      ['journey-walk-src', 'journey-walk-dest', 'journey-metro-route'].forEach(id => {
+        if (map.getSource(id)) map.removeSource(id);
+      });
+      // Remove journey markers
+      journeyMarkersRef.current.forEach(m => m.remove());
+      journeyMarkersRef.current = [];
+    }, []);
+
+    const showJourneyOnMap = useCallback((journey: JourneyResult | null) => {
+      const map = mapRef.current;
+      if (!map) return;
+      clearJourneyLayers();
+      if (!journey) return;
+
+      // Source walking route
+      if (journey.source_walking.geometry.length >= 2) {
+        map.addSource('journey-walk-src', {
+          type: 'geojson',
+          data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: journey.source_walking.geometry } },
+        });
+        map.addLayer({
+          id: 'journey-walk-src-dash', type: 'line', source: 'journey-walk-src',
+          paint: { 'line-color': '#4ade80', 'line-width': 3, 'line-dasharray': [2, 2], 'line-opacity': 0.8 },
+        });
+      }
+
+      // Dest walking route
+      if (journey.dest_walking.geometry.length >= 2) {
+        map.addSource('journey-walk-dest', {
+          type: 'geojson',
+          data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: journey.dest_walking.geometry } },
+        });
+        map.addLayer({
+          id: 'journey-walk-dest-dash', type: 'line', source: 'journey-walk-dest',
+          paint: { 'line-color': '#f87171', 'line-width': 3, 'line-dasharray': [2, 2], 'line-opacity': 0.8 },
+        });
+      }
+
+      // Metro route highlight
+      if (journey.metro_route_coords.length >= 2) {
+        map.addSource('journey-metro-route', {
+          type: 'geojson',
+          data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: journey.metro_route_coords } },
+        });
+        map.addLayer({
+          id: 'journey-metro-glow', type: 'line', source: 'journey-metro-route',
+          paint: { 'line-color': '#fbbf24', 'line-width': 14, 'line-blur': 10, 'line-opacity': 0.35 },
+        });
+        map.addLayer({
+          id: 'journey-metro-route', type: 'line', source: 'journey-metro-route',
+          paint: { 'line-color': '#fbbf24', 'line-width': 4, 'line-dasharray': [2, 1], 'line-opacity': 1 },
+        });
+      }
+
+      // Source marker (green)
+      const srcGeom = journey.source_walking.geometry;
+      if (srcGeom.length > 0) {
+        const el = document.createElement('div');
+        el.className = 'journey-marker-source';
+        el.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#4ade80;border:3px solid #fff;box-shadow:0 0 12px #4ade80,0 2px 8px rgba(0,0,0,0.4);';
+        const marker = new maplibregl.Marker({ element: el }).setLngLat(srcGeom[0] as [number, number]).addTo(map);
+        journeyMarkersRef.current.push(marker);
+      }
+
+      // Dest marker (red)
+      const destGeom = journey.dest_walking.geometry;
+      if (destGeom.length > 0) {
+        const el = document.createElement('div');
+        el.className = 'journey-marker-dest';
+        el.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#f87171;border:3px solid #fff;box-shadow:0 0 12px #f87171,0 2px 8px rgba(0,0,0,0.4);';
+        const lastCoord = destGeom[destGeom.length - 1];
+        const marker = new maplibregl.Marker({ element: el }).setLngLat(lastCoord as [number, number]).addTo(map);
+        journeyMarkersRef.current.push(marker);
+      }
+
+      // Fit bounds to show full journey
+      const allCoords = [
+        ...journey.source_walking.geometry,
+        ...journey.metro_route_coords,
+        ...journey.dest_walking.geometry,
+      ];
+      if (allCoords.length >= 2) {
+        const bounds = new maplibregl.LngLatBounds();
+        allCoords.forEach(c => bounds.extend(c as [number, number]));
+        map.fitBounds(bounds, { padding: 100, pitch: 60, duration: 1800 });
+      }
+    }, [clearJourneyLayers]);
 
     useImperativeHandle(ref, () => ({
       getMap: () => mapRef.current,
@@ -49,6 +150,12 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
       },
       highlightRoute: (route: RouteResult | null) => {
         highlightRouteOnMap(route);
+      },
+      showJourney: (journey: JourneyResult | null) => {
+        showJourneyOnMap(journey);
+      },
+      clearJourney: () => {
+        clearJourneyLayers();
       },
     }));
 

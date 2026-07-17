@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str
     GEMINI_MODEL: str
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/metro_guide"
+    ORS_API_KEY: str = ""  # Optional: OpenRouteService API key for walking directions
 
     model_config = SettingsConfigDict(
         env_file=".env",

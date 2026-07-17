@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Train, Route, ListFilter } from 'lucide-react';
+import { Train, Navigation, ListFilter } from 'lucide-react';
 import type maplibregl from 'maplibre-gl';
 
 import MetroMap, { type MetroMapHandle } from './components/MetroMap';
@@ -9,14 +9,14 @@ import StationPanel from './components/StationPanel';
 import StationDetail from './components/StationDetail';
 import MapStyleSwitcher from './components/MapStyleSwitcher';
 import SettingsPanel from './components/SettingsPanel';
-import RoutePlanner from './components/RoutePlanner';
+import JourneyPlanner from './components/JourneyPlanner';
 import MapControls from './components/MapControls';
 import LoadingScreen from './components/LoadingScreen';
 import CitySelector from './components/CitySelector';
 import ChatPanel from './components/ChatPanel';
 import { CITY_CONFIGS, type CityId } from './data/cityData';
 import { DEFAULT_SCENE_SETTINGS, type SceneSettings } from './utils/mapStyles';
-import type { RouteResult } from './utils/pathfinding';
+import type { JourneyResult } from './utils/journeyApi';
 
 import './App.css';
 
@@ -31,7 +31,7 @@ function useIsMobile() {
   return isMobile;
 }
 
-type MobileTab = 'map' | 'stations' | 'route';
+type MobileTab = 'map' | 'stations' | 'journey';
 
 function App() {
   const [selectedCity, setSelectedCity] = useState<CityId>('pune');
@@ -72,9 +72,9 @@ function App() {
     mapRef.current?.flyToStation(stationId);
   }, []);
 
-  const handleRouteCalculated = useCallback((route: RouteResult | null) => {
-    mapRef.current?.highlightRoute(route);
-    if (isMobile && route) setActiveTab('map');
+  const handleJourneyResult = useCallback((result: JourneyResult | null) => {
+    mapRef.current?.showJourney(result);
+    if (isMobile && result) setActiveTab('map');
   }, [isMobile]);
 
   const handleToggleFullscreen = useCallback(() => {
@@ -134,10 +134,9 @@ function App() {
           {/* ── Desktop-only overlays ── */}
           {!isMobile && (
             <>
-              {/* Top-center: Route planner */}
-              <RoutePlanner
-                onRouteCalculated={handleRouteCalculated}
-                onStationFocus={handleNavigateStation}
+              {/* Bottom-center: Journey planner */}
+              <JourneyPlanner
+                onJourneyResult={handleJourneyResult}
                 cityConfig={cityConfig}
               />
 
@@ -196,15 +195,13 @@ function App() {
                 />
               )}
 
-              {/* Route planner tab — bottom sheet */}
-              {activeTab === 'route' && (
-                <RoutePlanner
-                  onRouteCalculated={handleRouteCalculated}
-                  onStationFocus={handleNavigateStation}
+              {/* Journey planner tab — bottom sheet */}
+              {activeTab === 'journey' && (
+                <JourneyPlanner
+                  onJourneyResult={handleJourneyResult}
                   cityConfig={cityConfig}
                 />
               )}
-
 
               {/* Bottom nav bar */}
               <nav className="mobile-nav-bar">
@@ -223,11 +220,11 @@ function App() {
                   Stations
                 </button>
                 <button
-                  className={`mobile-nav-btn ${activeTab === 'route' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('route')}
+                  className={`mobile-nav-btn ${activeTab === 'journey' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('journey')}
                 >
-                  <Route size={18} />
-                  Route
+                  <Navigation size={18} />
+                  Journey
                 </button>
               </nav>
             </>

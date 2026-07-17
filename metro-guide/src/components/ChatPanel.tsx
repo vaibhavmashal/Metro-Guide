@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Sparkles, Send, X, Loader2, Trash2, MessageSquare } from 'lucide-react';
+import { Bot, Send, X, Loader2, Trash2, MessageSquare } from 'lucide-react';
 import { type CityConfig } from '../data/cityData';
 import { FormattedMessage } from './FormattedMessage';
 
@@ -25,6 +25,14 @@ const DEFAULT_SUGGESTIONS: string[] = [
 export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
+  const [sessionId, setSessionId] = useState<string>(() => {
+    let id = sessionStorage.getItem('metro_guest_session_id');
+    if (!id) {
+      id = crypto.randomUUID();
+      sessionStorage.setItem('metro_guest_session_id', id);
+    }
+    return id;
+  });
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -68,7 +76,7 @@ export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelPro
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: query }),
+        body: JSON.stringify({ message: query, session_id: sessionId }),
       });
 
       if (!response.ok) {
@@ -105,7 +113,20 @@ export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelPro
     }
   };
 
-  const handleClearHistory = () => {
+  const handleClearHistory = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      await fetch(`${apiUrl}/chat/history/${sessionId}`, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      console.error("Failed to delete chat history from database:", error);
+    }
+
+    const newId = crypto.randomUUID();
+    sessionStorage.setItem('metro_guest_session_id', newId);
+    setSessionId(newId);
+
     setMessages([
       {
         id: Date.now().toString(),
@@ -160,6 +181,7 @@ export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelPro
               padding: '14px 18px',
               background: 'linear-gradient(90deg, rgba(124,58,237,0.22) 0%, rgba(18,20,36,0.4) 100%)',
               borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              flexShrink: 0,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{
@@ -180,28 +202,32 @@ export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelPro
                     right: '-2px',
                     width: '10px',
                     height: '10px',
-                    background: '#22c55e',
                     borderRadius: '50%',
-                    border: '2px solid #121424'
+                    backgroundColor: '#4ade80',
+                    border: '2px solid rgba(18,20,36,0.95)'
                   }} />
                 </div>
                 <div>
-                  <div style={{
+                  <h3 style={{
+                    color: '#f8fafc',
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    margin: 0,
+                    letterSpacing: '-0.01em',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px'
                   }}>
-                    <h3 style={{
-                      color: '#f8fafc',
-                      fontSize: '14px',
-                      fontWeight: 700,
-                      margin: 0,
-                      letterSpacing: '0.02em'
-                    }}>
-                      Metro AI Assistant
-                    </h3>
-                    <Sparkles size={13} style={{ color: '#c084fc' }} />
-                  </div>
+                    Metro AI Assistant
+                  </h3>
+                  <span style={{
+                    color: '#a78bfa',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    display: 'block'
+                  }}>
+                    Ask anything about metro routes
+                  </span>
                 </div>
               </div>
 
@@ -210,20 +236,21 @@ export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelPro
                   onClick={handleClearHistory}
                   title="Clear conversation"
                   style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '9px',
                     background: 'rgba(255,255,255,0.06)',
                     border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '8px',
-                    padding: '6px',
-                    color: '#94a3b8',
-                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
                     transition: 'all 0.15s'
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.color = '#f43f5e';
-                    e.currentTarget.style.background = 'rgba(244,63,94,0.12)';
+                    e.currentTarget.style.color = '#f87171';
+                    e.currentTarget.style.background = 'rgba(248,113,113,0.12)';
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.color = '#94a3b8';
@@ -236,15 +263,16 @@ export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelPro
                   onClick={() => setIsOpen(false)}
                   title="Close Assistant"
                   style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '9px',
                     background: 'rgba(255,255,255,0.06)',
                     border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '8px',
-                    padding: '6px',
-                    color: '#94a3b8',
-                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
                     transition: 'all 0.15s'
                   }}
                   onMouseEnter={e => {
@@ -262,8 +290,9 @@ export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelPro
             </div>
 
             {/* Message History */}
-            <div style={{
+            <div className="custom-scrollbar" style={{
               flex: 1,
+              minHeight: 0,
               overflowY: 'auto',
               padding: '16px',
               display: 'flex',
@@ -340,7 +369,8 @@ export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelPro
                 padding: '0 16px 12px 16px',
                 display: 'flex',
                 flexWrap: 'wrap',
-                gap: '6px'
+                gap: '6px',
+                flexShrink: 0,
               }}>
                 {DEFAULT_SUGGESTIONS.map((sug, idx) => (
                   <button
@@ -379,7 +409,8 @@ export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelPro
               borderTop: '1px solid rgba(255, 255, 255, 0.08)',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              flexShrink: 0,
             }}>
               <input
                 type="text"

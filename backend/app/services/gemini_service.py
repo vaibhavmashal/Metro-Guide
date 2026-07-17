@@ -18,9 +18,9 @@ class GeminiService:
 
         self.model = settings.GEMINI_MODEL
 
-    def generate_response(self, message: str, history: list[types.Content] | None = None) -> str:
+    def generate_response(self, message: str, history: list[types.Content] | None = None, system_instruction: str | None = None) -> str:
         """
-        Generate a response from Gemini using optional multi-turn history.
+        Generate a response from Gemini using optional multi-turn history and optional custom system instruction.
         """
         try:
             if history:
@@ -28,20 +28,22 @@ class GeminiService:
             else:
                 contents = message
 
+            sys_inst = system_instruction if system_instruction is not None else METRO_AI_SYSTEM_INSTRUCTION
+
             response = self.client.models.generate_content(
                 model=self.model,
                 contents=contents,
                 config=types.GenerateContentConfig(
                     temperature=0.7,
-                    max_output_tokens=1024,
-                    system_instruction=METRO_AI_SYSTEM_INSTRUCTION,
+                    max_output_tokens=8192,
+                    system_instruction=sys_inst,
                 ),
             )
             return response.text
         except Exception as e:
             raise Exception(f"Gemini API Error: {str(e)}")
 
-    def get_stream_response(self, message: str, history: list[types.Content] | None = None):
+    def get_stream_response(self, message: str, history: list[types.Content] | None = None, system_instruction: str | None = None):
         """
         Generate a streaming response from Gemini using optional multi-turn history, yielding text chunks.
         """
@@ -51,13 +53,15 @@ class GeminiService:
             else:
                 contents = message
 
+            sys_inst = system_instruction if system_instruction is not None else METRO_AI_SYSTEM_INSTRUCTION
+
             response = self.client.models.generate_content_stream(
                 model=self.model,
                 contents=contents,
                 config=types.GenerateContentConfig(
                     temperature=0.7,
-                    max_output_tokens=1024,
-                    system_instruction=METRO_AI_SYSTEM_INSTRUCTION,
+                    max_output_tokens=8192,
+                    system_instruction=sys_inst,
                 ),
             )
 
