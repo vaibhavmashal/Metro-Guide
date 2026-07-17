@@ -80,20 +80,10 @@ export default function MapControls({ map, isFullscreen, onToggleFullscreen }: M
   const pressIn  = (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.transform = 'scale(0.92)'; };
   const pressOut = (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.transform = 'scale(1)'; };
 
-  /*
-   * POSITION LOGIC
-   * ─────────────────────────────────────────────────────
-   * Desktop:
-   *   Anchored to the true bottom-RIGHT corner of the screen.
-   *   right: 16px, bottom: 20px — sits at the right edge,
-   *   below and inside the station panel column.
-   *
-   * Mobile:
-   *   right: 12px, bottom: 68px — above the 60px nav bar.
-   */
   const wrapperStyle: React.CSSProperties = {
     position: 'fixed',
-    bottom: mobile ? '68px' : '20px',
+    top:    mobile ? '76px' : 'auto',
+    bottom: mobile ? 'auto' : '20px',
     right:  mobile ? '12px' : '16px',
     zIndex: 15,
     display: 'flex',

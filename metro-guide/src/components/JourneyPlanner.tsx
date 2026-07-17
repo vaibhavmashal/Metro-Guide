@@ -24,6 +24,8 @@ interface JourneyLocation {
 interface JourneyPlannerProps {
   onJourneyResult: (result: JourneyResult | null) => void;
   cityConfig?: CityConfig;
+  activeTab?: string;
+  onTabChange?: (tab: any) => void;
 }
 
 const getIsMobile = () => window.innerWidth < 640;
@@ -39,9 +41,12 @@ const LINE_DISPLAY_COLORS: Record<string, string> = {
 export default function JourneyPlanner({
   onJourneyResult,
   cityConfig = CITY_CONFIGS.pune,
+  activeTab,
+  onTabChange,
 }: JourneyPlannerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mobile, setMobile] = useState(getIsMobile);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   // Location state
   const [sourceLocation, setSourceLocation] = useState<JourneyLocation | null>(null);
@@ -181,6 +186,7 @@ export default function JourneyPlanner({
     setDestLocation(tmpLoc);
     setDestSearch(tmpSearch);
     setJourney(null);
+    setShowDetailsModal(false);
     onJourneyResult(null);
   }, [sourceLocation, destLocation, sourceSearch, destSearch, onJourneyResult]);
 
@@ -191,6 +197,7 @@ export default function JourneyPlanner({
     setDestSearch('');
     setJourney(null);
     setError(null);
+    setShowDetailsModal(false);
     onJourneyResult(null);
   }, [onJourneyResult]);
 
@@ -199,6 +206,7 @@ export default function JourneyPlanner({
     setIsPlanning(true);
     setError(null);
     setJourney(null);
+    setShowDetailsModal(false);
 
     try {
       const result = await planJourney(
@@ -211,6 +219,7 @@ export default function JourneyPlanner({
         cityConfig.id,
       );
       setJourney(result);
+      setShowDetailsModal(false);
       onJourneyResult(result);
     } catch (e: any) {
       setError(e.message || 'Failed to plan journey');
@@ -219,7 +228,7 @@ export default function JourneyPlanner({
     }
   }, [sourceLocation, destLocation, cityConfig.id, onJourneyResult]);
 
-  const effectiveOpen = mobile ? true : isOpen;
+  const effectiveOpen = mobile ? ((activeTab === 'journey' && (!journey || showDetailsModal)) || showDetailsModal) : isOpen;
 
   // ── Styles ──────────────────────────────────────────────────
 
@@ -261,8 +270,148 @@ export default function JourneyPlanner({
     boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
   };
 
+  // ── Mode calculations hoisted for both compact and modal views ──
+  const srcOpt = journey?.source_options?.find(o => o.mode === selectedSourceMode) || {
+    mode: 'walking' as const,
+    mode_name: 'Walking',
+    distance_meters: journey?.source_walking.distance_meters || 0,
+    duration_minutes: journey?.source_walking.duration_minutes || 0,
+    fare_estimate: 'Free',
+    description: '',
+  };
+  const dstOpt = journey?.dest_options?.find(o => o.mode === selectedDestMode) || {
+    mode: 'walking' as const,
+    mode_name: 'Walking',
+    distance_meters: journey?.dest_walking.distance_meters || 0,
+    duration_minutes: journey?.dest_walking.duration_minutes || 0,
+    fare_estimate: 'Free',
+    description: '',
+  };
+  const dynamicTotalMinutes = journey ? Math.round(srcOpt.duration_minutes + journey.metro_time_minutes + dstOpt.duration_minutes) : 0;
+
+  const getModeIcon = (mode: string) => {
+    if (mode === 'vehicle') return <Car size={13} />;
+    if (mode === 'public_transport') return <Bus size={13} />;
+    return <Footprints size={13} />;
+  };
+
   return (
     <div style={mobile ? mobileContainerStyle : desktopContainerStyle}>
+      {/* Mobile Compact Route Bar (when journey is planned and modal is closed) */}
+      <AnimatePresence>
+        {mobile && journey && !showDetailsModal && activeTab === 'map' && (
+          <motion.div
+            initial={{ y: 60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 60, opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            style={{
+              position: 'fixed',
+              bottom: '66px',
+              left: '12px',
+              right: '12px',
+              background: 'rgba(18, 20, 36, 0.96)',
+              backdropFilter: 'blur(36px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(36px) saturate(180%)',
+              border: '1px solid rgba(255, 255, 255, 0.16)',
+              borderRadius: '18px',
+              padding: '14px 16px',
+              boxShadow: '0 16px 40px rgba(0,0,0,0.65), 0 0 24px rgba(34, 211, 238, 0.15)',
+              zIndex: 35,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              fontFamily: 'Inter, system-ui, sans-serif'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  padding: '4px 10px',
+                  borderRadius: '999px',
+                  background: 'linear-gradient(135deg, rgba(34,211,238,0.2), rgba(124,58,237,0.2))',
+                  border: '1px solid rgba(34,211,238,0.3)',
+                  color: '#22d3ee',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}>
+                  <Train size={13} />
+                  <span>{journey.total_stations} Stations</span>
+                </div>
+                <span style={{ color: '#f8fafc', fontSize: '14px', fontWeight: 700 }}>
+                  ~{dynamicTotalMinutes} min
+                </span>
+                <span style={{ color: '#94a3b8', fontSize: '13px' }}>
+                  ({journey.metro_distance_km} km)
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setShowDetailsModal(false);
+                  setJourney(null);
+                  onJourneyResult(null);
+                  onTabChange?.('journey');
+                }}
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '10px',
+                  padding: '6px',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="Modify search"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+              <div style={{ fontSize: '12.5px', color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                <span style={{ color: '#4ade80', fontWeight: 600 }}>{journey.source_station.name}</span>
+                <span style={{ margin: '0 6px', color: '#64748b' }}>→</span>
+                <span style={{ color: '#f87171', fontWeight: 600 }}>{journey.dest_station.name}</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <motion.button
+                onClick={() => {
+                  setShowDetailsModal(true);
+                  onTabChange?.('journey');
+                }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                style={{
+                  flex: 1,
+                  padding: '11px 16px',
+                  background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  borderRadius: '12px',
+                  color: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 20px rgba(124, 58, 237, 0.4)'
+                }}
+              >
+                <Sparkles size={16} style={{ color: '#fde047' }} />
+                <span>View Route Details & AI Guide</span>
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Desktop Toggle */}
       {!mobile && !isOpen && (
         <motion.button
@@ -300,17 +449,29 @@ export default function JourneyPlanner({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Navigation size={16} style={{ color: '#22d3ee' }} />
                 <span style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                  Journey Planner
+                  {mobile && showDetailsModal && journey ? 'Route Details & AI Guide' : 'Journey Planner'}
                 </span>
               </div>
-              {!mobile && (
-                <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}>
+              {(!mobile || (mobile && showDetailsModal && journey)) && (
+                <button
+                  onClick={() => {
+                    if (mobile && showDetailsModal) {
+                      setShowDetailsModal(false);
+                      onTabChange?.('map');
+                    } else {
+                      setIsOpen(false);
+                    }
+                  }}
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+                >
                   <X size={16} />
                 </button>
               )}
             </div>
 
-            {/* Inputs */}
+            {(!mobile || !showDetailsModal || !journey) ? (
+              <>
+                {/* Inputs */}
             <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch', flexShrink: 0 }}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {/* Source */}
@@ -517,6 +678,34 @@ export default function JourneyPlanner({
                 </motion.div>
               )}
             </AnimatePresence>
+              </>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexShrink: 0 }}>
+                <div style={{ fontSize: '13px', color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ color: '#4ade80', fontWeight: 600 }}>{journey.source_station.name}</span>
+                  <span style={{ margin: '0 8px', color: '#64748b' }}>→</span>
+                  <span style={{ color: '#f87171', fontWeight: 600 }}>{journey.dest_station.name}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowDetailsModal(false);
+                    onTabChange?.('map');
+                  }}
+                  style={{
+                    background: 'rgba(34,211,238,0.12)',
+                    border: '1px solid rgba(34,211,238,0.3)',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    color: '#22d3ee',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Show Map
+                </button>
+              </div>
+            )}
 
             {/* Journey Result */}
             <AnimatePresence>
@@ -526,180 +715,150 @@ export default function JourneyPlanner({
                   style={{ marginTop: '14px', overflow: 'hidden', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
                 >
                   <div className="custom-scrollbar" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '14px', overflowY: 'auto', flex: 1, minHeight: 0, paddingRight: '4px' }}>
-                    {/* Dynamic Mode Calculations */}
-                    {(() => {
-                      const srcOpt = journey.source_options?.find(o => o.mode === selectedSourceMode) || {
-                        mode: 'walking',
-                        mode_name: 'Walking',
-                        distance_meters: journey.source_walking.distance_meters,
-                        duration_minutes: journey.source_walking.duration_minutes,
-                        fare_estimate: 'Free',
-                        description: '',
-                      };
-                      const dstOpt = journey.dest_options?.find(o => o.mode === selectedDestMode) || {
-                        mode: 'walking',
-                        mode_name: 'Walking',
-                        distance_meters: journey.dest_walking.distance_meters,
-                        duration_minutes: journey.dest_walking.duration_minutes,
-                        fare_estimate: 'Free',
-                        description: '',
-                      };
-                      const dynamicTotalMinutes = Math.round(srcOpt.duration_minutes + journey.metro_time_minutes + dstOpt.duration_minutes);
-
-                      const getModeIcon = (mode: string) => {
-                        if (mode === 'vehicle') return <Car size={13} />;
-                        if (mode === 'public_transport') return <Bus size={13} />;
-                        return <Footprints size={13} />;
-                      };
-
-                      return (
-                        <>
-                          {/* Stats */}
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '14px' }}>
-                            {[
-                              { icon: <Train size={14} />, value: journey.total_stations, label: 'Stations', color: '#a855f7' },
-                              { icon: <Clock size={14} />, value: dynamicTotalMinutes, label: 'Minutes', color: '#06b6d4' },
-                              { icon: <Route size={14} />, value: journey.metro_distance_km, label: 'Km', color: '#ec4899' },
-                            ].map(stat => (
-                              <div key={stat.label} style={{
-                                background: 'rgba(255,255,255,0.04)', borderRadius: '10px', padding: '10px 8px',
-                                textAlign: 'center', border: '1px solid rgba(255,255,255,0.06)',
-                              }}>
-                                <div style={{ color: stat.color, marginBottom: '2px', display: 'flex', justifyContent: 'center' }}>{stat.icon}</div>
-                                <p style={{ color: stat.color, fontSize: '18px', fontWeight: 700, margin: 0 }}>{stat.value}</p>
-                                <p style={{ color: '#64748b', fontSize: '10px', margin: '2px 0 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</p>
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Journey Timeline */}
-                          <div className="custom-scrollbar" style={{ maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
-                            {/* First Mile to source station */}
-                            <div style={{ marginBottom: '8px' }}>
-                              <JourneyStep
-                                icon={getModeIcon(selectedSourceMode)}
-                                iconColor="#4ade80"
-                                title={`${srcOpt.mode_name} to ${journey.source_station.name}`}
-                                subtitle={`${Math.round(srcOpt.distance_meters)}m · ${Math.round(srcOpt.duration_minutes)} min${srcOpt.fare_estimate && srcOpt.fare_estimate !== 'Free' ? ` · ${srcOpt.fare_estimate}` : ''}`}
-                                lineColor="#4ade80"
-                                isFirst
-                              />
-                              {journey.source_options && journey.source_options.length > 0 && (
-                                <div style={{ display: 'flex', gap: '4px', paddingLeft: '32px', marginTop: '-4px', marginBottom: '6px' }}>
-                                  {journey.source_options.map(o => (
-                                    <button
-                                      key={o.mode}
-                                      onClick={() => setSelectedSourceMode(o.mode as any)}
-                                      style={{
-                                        padding: '4px 8px', borderRadius: '6px', border: '1px solid',
-                                        borderColor: selectedSourceMode === o.mode ? 'rgba(74,222,128,0.4)' : 'rgba(255,255,255,0.08)',
-                                        background: selectedSourceMode === o.mode ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.03)',
-                                        color: selectedSourceMode === o.mode ? '#4ade80' : '#94a3b8',
-                                        fontSize: '11px', fontWeight: selectedSourceMode === o.mode ? 600 : 400,
-                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
-                                      }}
-                                    >
-                                      {getModeIcon(o.mode)}
-                                      <span>{o.mode === 'public_transport' ? 'Bus' : o.mode === 'vehicle' ? 'Auto/Bike' : 'Walk'}</span>
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Metro segments */}
-                            {journey.metro_segments.map((seg, i) => (
-                              <JourneyStep
-                                key={i}
-                                icon={i > 0 ? <ArrowRightLeft size={13} /> : <Train size={13} />}
-                                iconColor={LINE_DISPLAY_COLORS[seg.line] || '#a855f7'}
-                                title={i === 0 ? `Board ${seg.line_name}` : `Change to ${seg.line_name}`}
-                                subtitle={`${seg.direction} · ${seg.station_count} station${seg.station_count > 1 ? 's' : ''}`}
-                                lineColor={LINE_DISPLAY_COLORS[seg.line] || '#a855f7'}
-                                badge={i > 0 ? 'Interchange' : undefined}
-                              />
-                            ))}
-
-                            {/* Exit */}
-                            <JourneyStep
-                              icon={<MapPin size={13} />}
-                              iconColor="#f87171"
-                              title={`Exit at ${journey.dest_station.name}`}
-                              subtitle="Metro Station"
-                              lineColor="#f87171"
-                            />
-
-                            {/* Last Mile to destination */}
-                            <div style={{ marginTop: '4px' }}>
-                              <JourneyStep
-                                icon={getModeIcon(selectedDestMode)}
-                                iconColor="#f87171"
-                                title={`${dstOpt.mode_name} to destination`}
-                                subtitle={`${Math.round(dstOpt.distance_meters)}m · ${Math.round(dstOpt.duration_minutes)} min${dstOpt.fare_estimate && dstOpt.fare_estimate !== 'Free' ? ` · ${dstOpt.fare_estimate}` : ''}`}
-                                lineColor="transparent"
-                                isLast
-                              />
-                              {journey.dest_options && journey.dest_options.length > 0 && (
-                                <div style={{ display: 'flex', gap: '4px', paddingLeft: '32px', marginTop: '-4px' }}>
-                                  {journey.dest_options.map(o => (
-                                    <button
-                                      key={o.mode}
-                                      onClick={() => setSelectedDestMode(o.mode as any)}
-                                      style={{
-                                        padding: '4px 8px', borderRadius: '6px', border: '1px solid',
-                                        borderColor: selectedDestMode === o.mode ? 'rgba(248,113,113,0.4)' : 'rgba(255,255,255,0.08)',
-                                        background: selectedDestMode === o.mode ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.03)',
-                                        color: selectedDestMode === o.mode ? '#f87171' : '#94a3b8',
-                                        fontSize: '11px', fontWeight: selectedDestMode === o.mode ? 600 : 400,
-                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
-                                      }}
-                                    >
-                                      {getModeIcon(o.mode)}
-                                      <span>{o.mode === 'public_transport' ? 'Bus' : o.mode === 'vehicle' ? 'Auto/Bike' : 'Walk'}</span>
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Time Summary */}
-                          <div style={{
-                            marginTop: '12px', padding: '10px 14px', borderRadius: '10px',
-                            background: 'linear-gradient(135deg, rgba(6,182,212,0.08), rgba(59,130,246,0.08))',
-                            border: '1px solid rgba(6,182,212,0.15)',
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <Clock size={13} style={{ color: '#22d3ee' }} />
-                              <span style={{ color: '#94a3b8', fontSize: '12px' }}>Total Journey Time</span>
-                            </div>
-                            <span style={{ color: '#22d3ee', fontSize: '15px', fontWeight: 700 }}>
-                              {dynamicTotalMinutes} min
-                            </span>
-                          </div>
-                        </>
-                      );
-                    })()}
-
-                    {/* AI Summary */}
+                    {/* AI Summary Card Prominently at the Top */}
                     {journey.ai_summary && (
                       <div style={{
-                        marginTop: '12px', padding: '12px 14px', borderRadius: '12px',
-                        background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(79,70,229,0.06))',
-                        border: '1px solid rgba(124,58,237,0.15)',
+                        marginBottom: '16px', padding: '14px 16px', borderRadius: '14px',
+                        background: 'linear-gradient(135deg, rgba(124,58,237,0.15), rgba(79,70,229,0.12))',
+                        border: '1px solid rgba(139,92,246,0.3)',
+                        boxShadow: '0 8px 24px rgba(124,58,237,0.2)'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                          <Sparkles size={13} style={{ color: '#c084fc' }} />
-                          <span style={{ color: '#c084fc', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                            AI Guide
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                          <Sparkles size={16} style={{ color: '#fde047' }} />
+                          <span style={{ color: '#fde047', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            AI Analyzed Journey Guide
                           </span>
                         </div>
-                        <div style={{ fontSize: '12px', lineHeight: '1.5', color: '#e2e8f0' }}>
+                        <div style={{ fontSize: '12.5px', lineHeight: '1.55', color: '#f1f5f9' }}>
                           <FormattedMessage text={journey.ai_summary} isUser={false} />
                         </div>
                       </div>
                     )}
+
+                    {/* Stats */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '14px' }}>
+                      {[
+                        { icon: <Train size={14} />, value: journey.total_stations, label: 'Stations', color: '#a855f7' },
+                        { icon: <Clock size={14} />, value: dynamicTotalMinutes, label: 'Minutes', color: '#06b6d4' },
+                        { icon: <Route size={14} />, value: journey.metro_distance_km, label: 'Km', color: '#ec4899' },
+                      ].map(stat => (
+                        <div key={stat.label} style={{
+                          background: 'rgba(255,255,255,0.04)', borderRadius: '10px', padding: '10px 8px',
+                          textAlign: 'center', border: '1px solid rgba(255,255,255,0.06)',
+                        }}>
+                          <div style={{ color: stat.color, marginBottom: '2px', display: 'flex', justifyContent: 'center' }}>{stat.icon}</div>
+                          <p style={{ color: stat.color, fontSize: '18px', fontWeight: 700, margin: 0 }}>{stat.value}</p>
+                          <p style={{ color: '#64748b', fontSize: '10px', margin: '2px 0 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Journey Timeline */}
+                    <div className="custom-scrollbar" style={{ maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
+                      {/* First Mile to source station */}
+                      <div style={{ marginBottom: '8px' }}>
+                        <JourneyStep
+                          icon={getModeIcon(selectedSourceMode)}
+                          iconColor="#4ade80"
+                          title={`${srcOpt.mode_name} to ${journey.source_station.name}`}
+                          subtitle={`${Math.round(srcOpt.distance_meters)}m · ${Math.round(srcOpt.duration_minutes)} min${srcOpt.fare_estimate && srcOpt.fare_estimate !== 'Free' ? ` · ${srcOpt.fare_estimate}` : ''}`}
+                          lineColor="#4ade80"
+                          isFirst
+                        />
+                        {journey.source_options && journey.source_options.length > 0 && (
+                          <div style={{ display: 'flex', gap: '4px', paddingLeft: '32px', marginTop: '-4px', marginBottom: '6px' }}>
+                            {journey.source_options.map(o => (
+                              <button
+                                key={o.mode}
+                                onClick={() => setSelectedSourceMode(o.mode as any)}
+                                style={{
+                                  padding: '4px 8px', borderRadius: '6px', border: '1px solid',
+                                  borderColor: selectedSourceMode === o.mode ? 'rgba(74,222,128,0.4)' : 'rgba(255,255,255,0.08)',
+                                  background: selectedSourceMode === o.mode ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.03)',
+                                  color: selectedSourceMode === o.mode ? '#4ade80' : '#94a3b8',
+                                  fontSize: '11px', fontWeight: selectedSourceMode === o.mode ? 600 : 400,
+                                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                                }}
+                              >
+                                {getModeIcon(o.mode)}
+                                <span>{o.mode === 'public_transport' ? 'Bus' : o.mode === 'vehicle' ? 'Auto/Bike' : 'Walk'}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Metro segments */}
+                      {journey.metro_segments.map((seg, i) => (
+                        <JourneyStep
+                          key={i}
+                          icon={i > 0 ? <ArrowRightLeft size={13} /> : <Train size={13} />}
+                          iconColor={LINE_DISPLAY_COLORS[seg.line] || '#a855f7'}
+                          title={i === 0 ? `Board ${seg.line_name}` : `Change to ${seg.line_name}`}
+                          subtitle={`${seg.direction} · ${seg.station_count} station${seg.station_count > 1 ? 's' : ''}`}
+                          lineColor={LINE_DISPLAY_COLORS[seg.line] || '#a855f7'}
+                          badge={i > 0 ? 'Interchange' : undefined}
+                        />
+                      ))}
+
+                      {/* Exit */}
+                      <JourneyStep
+                        icon={<MapPin size={13} />}
+                        iconColor="#f87171"
+                        title={`Exit at ${journey.dest_station.name}`}
+                        subtitle="Metro Station"
+                        lineColor="#f87171"
+                      />
+
+                      {/* Last Mile to destination */}
+                      <div style={{ marginTop: '4px' }}>
+                        <JourneyStep
+                          icon={getModeIcon(selectedDestMode)}
+                          iconColor="#f87171"
+                          title={`${dstOpt.mode_name} to destination`}
+                          subtitle={`${Math.round(dstOpt.distance_meters)}m · ${Math.round(dstOpt.duration_minutes)} min${dstOpt.fare_estimate && dstOpt.fare_estimate !== 'Free' ? ` · ${dstOpt.fare_estimate}` : ''}`}
+                          lineColor="transparent"
+                          isLast
+                        />
+                        {journey.dest_options && journey.dest_options.length > 0 && (
+                          <div style={{ display: 'flex', gap: '4px', paddingLeft: '32px', marginTop: '-4px' }}>
+                            {journey.dest_options.map(o => (
+                              <button
+                                key={o.mode}
+                                onClick={() => setSelectedDestMode(o.mode as any)}
+                                style={{
+                                  padding: '4px 8px', borderRadius: '6px', border: '1px solid',
+                                  borderColor: selectedDestMode === o.mode ? 'rgba(248,113,113,0.4)' : 'rgba(255,255,255,0.08)',
+                                  background: selectedDestMode === o.mode ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.03)',
+                                  color: selectedDestMode === o.mode ? '#f87171' : '#94a3b8',
+                                  fontSize: '11px', fontWeight: selectedDestMode === o.mode ? 600 : 400,
+                                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                                }}
+                              >
+                                {getModeIcon(o.mode)}
+                                <span>{o.mode === 'public_transport' ? 'Bus' : o.mode === 'vehicle' ? 'Auto/Bike' : 'Walk'}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Time Summary */}
+                    <div style={{
+                      marginTop: '12px', padding: '10px 14px', borderRadius: '10px',
+                      background: 'linear-gradient(135deg, rgba(6,182,212,0.08), rgba(59,130,246,0.08))',
+                      border: '1px solid rgba(6,182,212,0.15)',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Clock size={13} style={{ color: '#22d3ee' }} />
+                        <span style={{ color: '#94a3b8', fontSize: '12px' }}>Total Journey Time</span>
+                      </div>
+                      <span style={{ color: '#22d3ee', fontSize: '15px', fontWeight: 700 }}>
+                        {dynamicTotalMinutes} min
+                      </span>
+                    </div>
                   </div>
                 </motion.div>
               )}

@@ -129,7 +129,7 @@ function App() {
           <CitySelector currentCity={selectedCity} onCityChange={handleCityChange} />
 
           {/* ── AI Chatbot Assistant Panel ── */}
-          <ChatPanel cityConfig={cityConfig} isMobile={isMobile} />
+          <ChatPanel cityConfig={cityConfig} isMobile={isMobile} activeTab={activeTab} />
 
           {/* ── Desktop-only overlays ── */}
           {!isMobile && (
@@ -195,13 +195,13 @@ function App() {
                 />
               )}
 
-              {/* Journey planner tab — bottom sheet */}
-              {activeTab === 'journey' && (
-                <JourneyPlanner
-                  onJourneyResult={handleJourneyResult}
-                  cityConfig={cityConfig}
-                />
-              )}
+              {/* Journey planner — always mounted on mobile so compact route bar and state persist */}
+              <JourneyPlanner
+                onJourneyResult={handleJourneyResult}
+                cityConfig={cityConfig}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+              />
 
               {/* Bottom nav bar */}
               <nav className="mobile-nav-bar">

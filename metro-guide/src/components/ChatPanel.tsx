@@ -14,6 +14,7 @@ interface ChatMessage {
 interface ChatPanelProps {
   cityConfig?: CityConfig;
   isMobile?: boolean;
+  activeTab?: string;
 }
 
 const DEFAULT_SUGGESTIONS: string[] = [
@@ -140,8 +141,11 @@ export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelPro
   return (
     <div style={{
       position: 'fixed',
-      bottom: isMobile ? '74px' : '20px',
-      right: isMobile ? '16px' : '20px',
+      top: isMobile ? '50%' : 'auto',
+      bottom: isMobile ? 'auto' : '20px',
+      left: 'auto',
+      right: isMobile ? '12px' : '20px',
+      transform: isMobile ? 'translateY(-50%)' : 'none',
       zIndex: 50,
       display: 'flex',
       flexDirection: 'column',
@@ -157,8 +161,8 @@ export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelPro
             exit={{ opacity: 0, y: 20, scale: 0.92 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
             style={{
-              width: isMobile ? 'calc(100vw - 32px)' : '360px',
-              maxWidth: 'calc(100vw - 32px)',
+              width: isMobile ? 'calc(100vw - 24px)' : '360px',
+              maxWidth: 'calc(100vw - 24px)',
               height: isMobile ? '420px' : '510px',
               maxHeight: 'calc(100vh - 140px)',
               background: 'rgba(18, 20, 36, 0.94)',
@@ -469,20 +473,40 @@ export default function ChatPanel({ cityConfig, isMobile = false }: ChatPanelPro
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          padding: isOpen ? '12px' : '12px 18px',
+          justifyContent: 'center',
+          gap: isMobile ? '0px' : '8px',
+          width: isMobile ? '46px' : 'auto',
+          height: isMobile ? '46px' : 'auto',
+          padding: isMobile ? '0' : (isOpen ? '12px' : '12px 18px'),
           background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.25)',
-          borderRadius: '9999px',
+          border: '1px solid rgba(255, 255, 255, 0.28)',
+          borderRadius: isMobile ? '50%' : '9999px',
           color: '#ffffff',
           cursor: 'pointer',
-          boxShadow: '0 10px 25px rgba(124, 58, 237, 0.45), 0 0 0 1px rgba(255,255,255,0.1)',
+          boxShadow: '0 10px 25px rgba(124, 58, 237, 0.5), 0 0 0 1px rgba(255,255,255,0.12)',
           transition: 'all 0.2s ease',
+          alignSelf: 'flex-end',
+          position: 'relative'
         }}
         title="Open Metro AI Assistant"
       >
         {isOpen ? (
           <X size={20} />
+        ) : isMobile ? (
+          <>
+            <Bot size={22} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
+            <span style={{
+              position: 'absolute',
+              top: '2px',
+              right: '2px',
+              width: '10px',
+              height: '10px',
+              borderRadius: '50%',
+              background: '#4ade80',
+              border: '2px solid #7c3aed',
+              boxShadow: '0 0 8px #4ade80'
+            }} />
+          </>
         ) : (
           <>
             <MessageSquare size={18} />
