@@ -45,7 +45,6 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 
 CITY_FILES = {
     "pune": "pune_stations.json",
-    "bangalore": "bangalore_stations.json",
 }
 
 # ── In-memory station cache ───────────────────────────────────
@@ -450,9 +449,6 @@ async def plan_journey(request: JourneyRequest) -> JourneyResult:
             "purple": "Purple Line",
             "aqua": "Aqua Line",
             "line3": "Line 3",
-            "blr_purple": "Purple Line",
-            "blr_green": "Green Line",
-            "blr_yellow": "Yellow Line",
         }
         line_name = line_name_map.get(line, line.replace("_", " ").title() + " Line")
 

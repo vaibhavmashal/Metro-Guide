@@ -33,7 +33,6 @@ const getIsMobile = () => window.innerWidth < 640;
 // ── LINE COLORS (duplicated small map for display) ──────────
 const LINE_DISPLAY_COLORS: Record<string, string> = {
   purple: '#a855f7', aqua: '#06b6d4', line3: '#ec4899',
-  blr_purple: '#9b30ff', blr_green: '#22c55e', blr_yellow: '#f59e0b',
 };
 
 // ── Component ───────────────────────────────────────────────

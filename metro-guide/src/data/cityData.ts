@@ -1,6 +1,6 @@
 // ============================================================
 // City Data Registry — Unified city-agnostic config
-// Supports Pune and Bangalore metro networks
+// Supports Pune metro network
 // ============================================================
 
 import {
@@ -16,22 +16,11 @@ import {
   type LineInfo,
 } from './metroData';
 
-import {
-  BLR_STATIONS,
-  BLR_LINES,
-  BLR_LINE_COLORS,
-  BLR_ROUTE_COORDINATES,
-  BLR_CENTER,
-  BLR_DEFAULT_ZOOM,
-  BLR_DEFAULT_PITCH,
-  BLR_DEFAULT_BEARING,
-} from './bangaloreMetroData';
-
-export type CityId = 'pune' | 'bangalore';
+export type CityId = 'pune';
 
 export interface CityConfig {
   id: CityId;
-  name: string;               // short: "Pune", "Bengaluru"
+  name: string;               // short: "Pune"
   fullLabel: string;          // "Pune Metro 3D"
   subtitle: string;           // shown in header subtitle
   center: [number, number];   // [lng, lat]
@@ -65,28 +54,8 @@ export const CITY_CONFIGS: Record<CityId, CityConfig> = {
       { name: 'Line 3', color: '#ec4899' },
     ],
   },
-  bangalore: {
-    id: 'bangalore',
-    name: 'Bengaluru',
-    fullLabel: 'Namma Metro 3D',
-    subtitle: 'Purple · Green · Yellow · Namma Metro',
-    center: BLR_CENTER,
-    defaultZoom: BLR_DEFAULT_ZOOM,
-    defaultPitch: BLR_DEFAULT_PITCH,
-    defaultBearing: BLR_DEFAULT_BEARING,
-    stations: BLR_STATIONS,
-    lines: BLR_LINES,
-    lineColors: BLR_LINE_COLORS as Record<string, { primary: string; glow: string; rgb: [number, number, number] }>,
-    routeCoordinates: BLR_ROUTE_COORDINATES as Record<string, [number, number][]>,
-    lineColorsDef: [
-      { name: 'Purple', color: '#9b30ff' },
-      { name: 'Green',  color: '#22c55e' },
-      { name: 'Yellow', color: '#f59e0b' },
-    ],
-  },
 };
 
 export const CITIES: { id: CityId; name: string; emoji: string }[] = [
-  { id: 'pune',      name: 'Pune',      emoji: '🟣' },
-  { id: 'bangalore', name: 'Bengaluru', emoji: '🟢' },
+  { id: 'pune', name: 'Pune', emoji: '🟣' },
 ];

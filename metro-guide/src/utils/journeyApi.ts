@@ -76,7 +76,6 @@ const PHOTON_BASE = 'https://photon.komoot.io';
 
 const CITY_BOUNDS: Record<string, string> = {
   pune: '73.65,18.75,74.15,18.35', // min_lon, max_lat, max_lon, min_lat
-  bangalore: '77.40,13.15,77.80,12.75',
 };
 
 let _searchAbortController: AbortController | null = null;

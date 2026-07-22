@@ -12,7 +12,7 @@ class JourneyRequest(BaseModel):
     dest_lng: float = Field(..., description="Destination longitude")
     source_name: str | None = Field(default=None, description="Source place name")
     dest_name: str | None = Field(default=None, description="Destination place name")
-    city: str = Field(default="pune", description="City identifier (pune, bangalore)")
+    city: str = Field(default="pune", description="City identifier (pune)")
 
 
 class StationInfo(BaseModel):
