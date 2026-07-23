@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Navigation, ArrowUpDown, X, MapPin, Loader2,
   Footprints, Train, ArrowRightLeft, Clock, Route, Sparkles,
-  Car, Bus,
+  Car, Bus, ChevronDown,
 } from 'lucide-react';
 import { CITY_CONFIGS, type CityConfig } from '../data/cityData';
 import {
@@ -237,14 +237,14 @@ export default function JourneyPlanner({
   };
   const desktopContainerStyle: React.CSSProperties = {
     position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
-    width: isOpen ? '380px' : 'auto', maxHeight: 'calc(100vh - 100px)', zIndex: 30,
+    width: isOpen ? '520px' : 'auto', maxHeight: 'calc(100vh - 100px)', zIndex: 30,
   };
   const cardStyle: React.CSSProperties = {
     background: 'rgba(22, 24, 40, 0.92)',
     backdropFilter: 'blur(36px) saturate(180%)', WebkitBackdropFilter: 'blur(36px) saturate(180%)',
     border: '1px solid rgba(255,255,255,0.10)',
     borderRadius: mobile ? '20px 20px 0 0' : '18px',
-    padding: mobile ? '12px 16px 14px' : '16px',
+    padding: mobile ? '12px 16px 14px' : '20px',
     boxShadow: '0 20px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08)',
     display: 'flex', flexDirection: 'column' as const,
     maxHeight: mobile ? '78vh' : 'calc(100vh - 100px)', overflow: 'hidden',
@@ -714,27 +714,7 @@ export default function JourneyPlanner({
                   style={{ marginTop: '14px', overflow: 'hidden', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
                 >
                   <div className="custom-scrollbar" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '14px', overflowY: 'auto', flex: 1, minHeight: 0, paddingRight: '4px' }}>
-                    {/* AI Summary Card Prominently at the Top */}
-                    {journey.ai_summary && (
-                      <div style={{
-                        marginBottom: '16px', padding: '14px 16px', borderRadius: '14px',
-                        background: 'linear-gradient(135deg, rgba(124,58,237,0.15), rgba(79,70,229,0.12))',
-                        border: '1px solid rgba(139,92,246,0.3)',
-                        boxShadow: '0 8px 24px rgba(124,58,237,0.2)'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                          <Sparkles size={16} style={{ color: '#fde047' }} />
-                          <span style={{ color: '#fde047', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                            AI Analyzed Journey Guide
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '12.5px', lineHeight: '1.55', color: '#f1f5f9' }}>
-                          <FormattedMessage text={journey.ai_summary} isUser={false} />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Stats */}
+                    {/* 1. Stats */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '14px' }}>
                       {[
                         { icon: <Train size={14} />, value: journey.total_stations, label: 'Stations', color: '#a855f7' },
@@ -752,8 +732,8 @@ export default function JourneyPlanner({
                       ))}
                     </div>
 
-                    {/* Journey Timeline */}
-                    <div className="custom-scrollbar" style={{ maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {/* 2. Journey Timeline */}
+                    <div style={{ paddingRight: '4px', marginBottom: '4px' }}>
                       {/* First Mile to source station */}
                       <div style={{ marginBottom: '8px' }}>
                         <JourneyStep
@@ -797,6 +777,8 @@ export default function JourneyPlanner({
                           subtitle={`${seg.direction} · ${seg.station_count} station${seg.station_count > 1 ? 's' : ''}`}
                           lineColor={LINE_DISPLAY_COLORS[seg.line] || '#a855f7'}
                           badge={i > 0 ? 'Interchange' : undefined}
+                          stations={seg.station_names || seg.stations || []}
+                          sourceStation={seg.station_names?.[0] || seg.stations?.[0] || ''}
                         />
                       ))}
 
@@ -858,6 +840,26 @@ export default function JourneyPlanner({
                         {dynamicTotalMinutes} min
                       </span>
                     </div>
+
+                    {/* 3. AI Response Card — at the bottom */}
+                    {journey.ai_summary && (
+                      <div style={{
+                        marginTop: '16px', padding: '14px 16px', borderRadius: '14px',
+                        background: 'linear-gradient(135deg, rgba(124,58,237,0.15), rgba(79,70,229,0.12))',
+                        border: '1px solid rgba(139,92,246,0.3)',
+                        boxShadow: '0 8px 24px rgba(124,58,237,0.2)'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                          <Sparkles size={16} style={{ color: '#fde047' }} />
+                          <span style={{ color: '#fde047', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            AI Analyzed Journey Guide
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '12.5px', lineHeight: '1.55', color: '#f1f5f9' }}>
+                          <FormattedMessage text={journey.ai_summary} isUser={false} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -880,6 +882,8 @@ function JourneyStep({
   badge,
   isFirst,
   isLast,
+  stations,
+  sourceStation,
 }: {
   icon: React.ReactNode;
   iconColor: string;
@@ -889,7 +893,14 @@ function JourneyStep({
   badge?: string;
   isFirst?: boolean;
   isLast?: boolean;
+  stations?: string[];
+  sourceStation?: string;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  // Intermediate stations = all stations except the first (source) and last (exit at dest)
+  const middleStations = stations && stations.length > 2 ? stations.slice(1, -1) : [];
+  const hasDropdown = middleStations.length > 0;
+
   return (
     <div style={{ display: 'flex', gap: '10px', position: 'relative', minHeight: '44px' }}>
       {/* Timeline column */}
@@ -916,7 +927,7 @@ function JourneyStep({
 
       {/* Content */}
       <div style={{ flex: 1, paddingBottom: isLast ? '0' : '4px', paddingTop: '2px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <span style={{ color: '#f1f5f9', fontSize: '12px', fontWeight: 600 }}>{title}</span>
           {badge && (
             <span style={{
@@ -928,7 +939,105 @@ function JourneyStep({
             </span>
           )}
         </div>
-        <span style={{ color: '#64748b', fontSize: '11px' }}>{subtitle}</span>
+
+        {/* Source station label + dropdown toggle */}
+        {sourceStation && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+            <span style={{
+              fontSize: '11px', color: iconColor, fontWeight: 600,
+              background: `${iconColor}15`, padding: '1px 7px', borderRadius: '4px',
+              border: `1px solid ${iconColor}30`,
+            }}>
+              {sourceStation}
+            </span>
+            {hasDropdown && (
+              <button
+                onClick={() => setExpanded(v => !v)}
+                title={expanded ? 'Hide stations' : `Show ${middleStations.length} intermediate station${middleStations.length > 1 ? 's' : ''}`}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '3px',
+                  padding: '2px 7px', borderRadius: '5px',
+                  background: expanded ? `${iconColor}22` : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${expanded ? iconColor + '50' : 'rgba(255,255,255,0.1)'}`,
+                  color: expanded ? iconColor : '#64748b',
+                  fontSize: '10px', fontWeight: 600,
+                  cursor: 'pointer', transition: 'all 0.2s',
+                }}
+              >
+                <ChevronDown
+                  size={11}
+                  style={{
+                    transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.25s ease',
+                  }}
+                />
+                <span>{middleStations.length} stop{middleStations.length > 1 ? 's' : ''}</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        <span style={{ color: '#64748b', fontSize: '11px', display: 'block', marginTop: sourceStation ? '2px' : '0' }}>
+          {subtitle}
+        </span>
+
+        {/* Expandable intermediate stations */}
+        <AnimatePresence>
+          {expanded && hasDropdown && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.22, ease: 'easeInOut' }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div style={{
+                marginTop: '8px',
+                marginLeft: '4px',
+                padding: '8px 10px',
+                borderRadius: '10px',
+                background: `${iconColor}08`,
+                border: `1px solid ${iconColor}25`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0',
+              }}>
+                {middleStations.map((st, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '5px 0',
+                      borderBottom: idx < middleStations.length - 1
+                        ? `1px solid ${iconColor}18`
+                        : 'none',
+                    }}
+                  >
+                    {/* Small dot */}
+                    <div style={{
+                      width: '6px', height: '6px', borderRadius: '50%',
+                      background: iconColor, opacity: 0.55, flexShrink: 0,
+                    }} />
+                    <span style={{
+                      fontSize: '11px', color: '#cbd5e1', fontWeight: 500,
+                      letterSpacing: '0.01em',
+                    }}>
+                      {st}
+                    </span>
+                    <span style={{
+                      marginLeft: 'auto', fontSize: '10px',
+                      color: '#475569', fontWeight: 400,
+                    }}>
+                      #{idx + 1}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
