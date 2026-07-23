@@ -51,27 +51,74 @@ CITY_FILES = {
 _station_cache: dict[str, dict[str, Any]] = {}
 
 
-def _load_stations(city: str) -> dict[str, Any]:
-    """Load station data from JSON file, caching in memory."""
+def preload_stations(city: str = "pune") -> dict[str, Any]:
+    """Load station data and connected graph directly from Supabase database with caching."""
+    city = city.lower()
     if city in _station_cache:
         return _station_cache[city]
 
-    filename = CITY_FILES.get(city)
-    if not filename:
-        raise ValueError(f"Unknown city: {city}. Supported: {list(CITY_FILES.keys())}")
+    try:
+        from app.db.database import engine
+        from sqlalchemy import text
 
+        stations = {}
+        with engine.connect() as conn:
+            s_rows = conn.execute(
+                text("SELECT id, name, line, latitude, longitude, facilities FROM metro_stations WHERE city = :city"),
+                {"city": city}
+            )
+            for r in s_rows:
+                fac = r.facilities
+                if isinstance(fac, str):
+                    try:
+                        fac = json.loads(fac)
+                    except Exception:
+                        fac = []
+                stations[r.id] = {
+                    "id": r.id,
+                    "name": r.name,
+                    "line": r.line,
+                    "latitude": float(r.latitude),
+                    "longitude": float(r.longitude),
+                    "facilities": fac or [],
+                    "connected_stations": []
+                }
+
+            e_rows = conn.execute(
+                text("SELECT from_station_id, to_station_id FROM metro_edges WHERE city = :city"),
+                {"city": city}
+            )
+            for r in e_rows:
+                f_id, t_id = r.from_station_id, r.to_station_id
+                if f_id in stations and t_id not in stations[f_id]["connected_stations"]:
+                    stations[f_id]["connected_stations"].append(t_id)
+                if t_id in stations and f_id not in stations[t_id]["connected_stations"]:
+                    stations[t_id]["connected_stations"].append(f_id)
+
+        if stations:
+            _station_cache[city] = stations
+            logger.info(f"Successfully preloaded {len(stations)} stations from Supabase DB for {city}")
+            return stations
+
+    except Exception as e:
+        logger.warning(f"Could not load stations from Supabase DB: {e}. Falling back to JSON file.")
+
+    filename = CITY_FILES.get(city, "pune_stations.json")
     filepath = DATA_DIR / filename
-    if not filepath.exists():
-        raise FileNotFoundError(f"Station data file not found: {filepath}")
+    if filepath.exists():
+        with open(filepath, "r", encoding="utf-8") as f:
+            stations_list = json.load(f)
+        stations = {s["id"]: s for s in stations_list}
+        _station_cache[city] = stations
+        logger.info(f"Loaded {len(stations)} stations from local JSON file for {city}")
+        return stations
 
-    with open(filepath, "r", encoding="utf-8") as f:
-        stations_list = json.load(f)
+    raise ValueError(f"No station data found for city: {city}")
 
-    # Index by station ID for O(1) lookup
-    stations = {s["id"]: s for s in stations_list}
-    _station_cache[city] = stations
-    logger.info(f"Loaded {len(stations)} stations for {city}")
-    return stations
+
+def _load_stations(city: str) -> dict[str, Any]:
+    """Get stations for a city, calling preload_stations."""
+    return preload_stations(city)
 
 
 def get_all_stations(city: str) -> dict[str, Any]:
@@ -97,19 +144,16 @@ def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return EARTH_RADIUS_KM * c
 
 
-# ── Nearest Station Search ────────────────────────────────────
-def find_nearest_station(lat: float, lng: float, city: str) -> StationInfo:
-    """
-    Find the nearest metro station to given coordinates.
-    Iterates all stations and returns the closest by Haversine distance.
-    Optimized for <100ms (trivially fast for ~50 stations).
-    """
+# ── Caching Helpers ──────────────────────────────────────────
+@lru_cache(maxsize=512)
+def _find_nearest_station_cached(lat_key: float, lng_key: float, city: str) -> dict:
+    """Cached nearest station lookup based on rounded coordinates (~100m grid)."""
     stations = _load_stations(city)
     best_id = None
     best_dist = float("inf")
 
     for sid, station in stations.items():
-        dist = haversine(lat, lng, station["latitude"], station["longitude"])
+        dist = haversine(lat_key, lng_key, station["latitude"], station["longitude"])
         if dist < best_dist:
             best_dist = dist
             best_id = sid
@@ -118,19 +162,41 @@ def find_nearest_station(lat: float, lng: float, city: str) -> StationInfo:
         raise ValueError(f"No stations found for city: {city}")
 
     station = stations[best_id]
-    return StationInfo(
-        id=station["id"],
-        name=station["name"],
-        line=station["line"],
-        latitude=station["latitude"],
-        longitude=station["longitude"],
-        distance_from_user_km=round(best_dist, 3),
-        distance_from_user_meters=round(best_dist * 1000, 0),
-    )
+    return {
+        "id": station["id"],
+        "name": station["name"],
+        "line": station["line"],
+        "latitude": station["latitude"],
+        "longitude": station["longitude"],
+        "distance_from_user_km": round(best_dist, 3),
+        "distance_from_user_meters": round(best_dist * 1000, 0),
+    }
 
 
-# ── Dijkstra Metro Route ─────────────────────────────────────
-def _find_metro_route(
+def find_nearest_station(lat: float, lng: float, city: str) -> StationInfo:
+    """
+    Find the nearest metro station to given coordinates using LRU cache.
+    Rounds lat/lng to 3 decimal places (~100m precision) for cache hits.
+    """
+    s_dict = _find_nearest_station_cached(round(lat, 3), round(lng, 3), city.lower())
+    return StationInfo(**s_dict)
+
+
+@lru_cache(maxsize=256)
+def _find_metro_route_cached(source_id: str, dest_id: str, city: str) -> str:
+    """Cached Dijkstra metro route computation."""
+    stations = _load_stations(city)
+    res = _find_metro_route_uncached(source_id, dest_id, stations)
+    return json.dumps(res) if res else ""
+
+
+def _find_metro_route(source_id: str, dest_id: str, stations: dict[str, Any], city: str = "pune") -> dict | None:
+    """Find optimal metro route, leveraging LRU cache."""
+    cached_str = _find_metro_route_cached(source_id, dest_id, city.lower())
+    return json.loads(cached_str) if cached_str else None
+
+
+def _find_metro_route_uncached(
     source_id: str, dest_id: str, stations: dict[str, Any]
 ) -> dict | None:
     """

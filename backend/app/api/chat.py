@@ -21,10 +21,10 @@ async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
         # Load past conversation history formatted for Gemini
         history = ConversationMemory.get_gemini_history(db, session_id)
 
-        # Generate reply using history
+        # Generate reply using Gemini
         reply = gemini_service.generate_response(request.message, history=history)
 
-        # Save both turns to PostgreSQL
+        # Save user message & model reply to database conversation memory
         ConversationMemory.add_message(db, session_id, role="user", content=request.message)
         ConversationMemory.add_message(db, session_id, role="model", content=reply)
 
@@ -38,7 +38,7 @@ async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
         error_msg = str(e)
         return ChatResponse(
             success=False,
-            response=f"I'm Metro AI! (Offline mode: {error_msg}). I can help you explore stations, check routes, and plan your metro journey across Pune and other cities.",
+            response=f"I'm Metro AI! (Offline mode: {error_msg}). I can help you explore stations, check routes, and plan your metro journey across Pune.",
             model=settings.GEMINI_MODEL,
             thinking_process=f"Fallback triggered: {error_msg}"
         )
@@ -53,8 +53,7 @@ async def chat_stream_endpoint(request: ChatRequest, db: Session = Depends(get_d
 
     def event_generator():
         try:
-            yield {"event": "status", "data": "Searching metro routes & details..."}
-            yield {"event": "status", "data": "Generating response..."}
+            yield {"event": "status", "data": "Processing query with Metro AI..."}
 
             # Load past conversation history formatted for Gemini
             history = ConversationMemory.get_gemini_history(db, session_id)
@@ -86,5 +85,3 @@ async def delete_chat_history(session_id: str, db: Session = Depends(get_db)):
     """
     deleted = ConversationMemory.delete_session(db, session_id)
     return {"success": True, "deleted": deleted, "session_id": session_id}
-
-

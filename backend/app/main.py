@@ -13,11 +13,16 @@ import app.db.models  # Register models
 logger = logging.getLogger(__name__)
 
 
+from app.services.journey_service import preload_stations
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables initialized successfully.")
+        # Preload stations and route graph from Supabase DB on startup
+        preload_stations("pune")
     except Exception as e:
         logger.warning(f"Could not connect to PostgreSQL or initialize tables: {e}")
     yield
