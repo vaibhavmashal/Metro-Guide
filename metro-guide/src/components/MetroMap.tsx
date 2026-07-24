@@ -34,6 +34,8 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
     const prevStyleRef = useRef(mapStyle);
     const cityConfigRef = useRef(cityConfig);
     const prevCityIdRef = useRef(cityConfig.id);
+    const currentJourneyRef = useRef<JourneyResult | null>(null);
+    const currentRouteRef = useRef<RouteResult | null>(null);
 
     cityConfigRef.current = cityConfig;
 
@@ -149,12 +151,15 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
         });
       },
       highlightRoute: (route: RouteResult | null) => {
+        currentRouteRef.current = route;
         highlightRouteOnMap(route);
       },
       showJourney: (journey: JourneyResult | null) => {
+        currentJourneyRef.current = journey;
         showJourneyOnMap(journey);
       },
       clearJourney: () => {
+        currentJourneyRef.current = null;
         clearJourneyLayers();
       },
     }));
@@ -638,6 +643,14 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
         addAllLayers(map, cityConfigRef.current);
         applySettings(map, settings, cityConfigRef.current);
         startTrainAnimation(map, cityConfigRef.current);
+        
+        if (currentRouteRef.current) {
+          highlightRouteOnMap(currentRouteRef.current);
+        }
+        if (currentJourneyRef.current) {
+          showJourneyOnMap(currentJourneyRef.current);
+        }
+        
         layersAddedRef.current = true;
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
