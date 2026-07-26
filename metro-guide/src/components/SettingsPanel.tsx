@@ -50,16 +50,7 @@ export default function SettingsPanel({ settings, onSettingsChange }: SettingsPa
   const sliderFill = ((settings.stationSize - 0.5) / 1.5) * 100;
 
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: '20px',
-      left: '72px',
-      zIndex: 10,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'flex-start',
-      gap: '8px',
-    }}>
+    <div className="fixed bottom-[80px] sm:bottom-5 left-[68px] sm:left-[72px] z-10 flex flex-col items-start gap-2">
 
       {/* ── Settings Panel ── */}
       <AnimatePresence>

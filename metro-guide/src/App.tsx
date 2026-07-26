@@ -155,18 +155,6 @@ function App() {
                 cityConfig={cityConfig}
               />
 
-              {/* Bottom-left FABs */}
-              <MapStyleSwitcher
-                currentStyle={mapStyle}
-                onStyleChange={setMapStyle}
-                is3DTerrain={is3DTerrain}
-                onToggle3DTerrain={setIs3DTerrain}
-              />
-              <SettingsPanel
-                settings={settings}
-                onSettingsChange={setSettings}
-              />
-
               {/* Map controls */}
               <MapControls
                 map={mapInstance}
@@ -229,6 +217,18 @@ function App() {
               </nav>
             </>
           )}
+
+          {/* ── FABs (always visible, repositioned on mobile via CSS) ── */}
+          <MapStyleSwitcher
+            currentStyle={mapStyle}
+            onStyleChange={setMapStyle}
+            is3DTerrain={is3DTerrain}
+            onToggle3DTerrain={setIs3DTerrain}
+          />
+          <SettingsPanel
+            settings={settings}
+            onSettingsChange={setSettings}
+          />
         </>
       )}
     </div>

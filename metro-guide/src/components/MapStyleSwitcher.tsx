@@ -19,7 +19,7 @@ export default function MapStyleSwitcher({
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="fixed bottom-5 left-5 z-10 flex flex-col items-start gap-2">
+    <div className="fixed bottom-[80px] sm:bottom-5 left-4 sm:left-5 z-10 flex flex-col items-start gap-2">
       {/* Panel — opens above the button */}
       <AnimatePresence>
         {isOpen && (
