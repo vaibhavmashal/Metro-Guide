@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Any
 
 
 class ChatRequest(BaseModel):
@@ -19,5 +20,6 @@ class ChatResponse(BaseModel):
     response: str
     model: str
     thinking_process: str
+    structured_route: dict[str, Any] | None = None  # Full route data for frontend map rendering
 
 

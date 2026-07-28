@@ -141,7 +141,7 @@ export const LIGHTING_PRESETS: Record<LightingMode, LightingPreset> = {
     skyColor: '#0a0a1a',
     fogColor: '#0f0f20',
     fogRange: [0.5, 10],
-    buildingColor: '#1e293b',
+    buildingColor: '#ffffff',
     buildingOpacity: 0.9,
   },
 };

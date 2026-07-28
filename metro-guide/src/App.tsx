@@ -129,7 +129,7 @@ function App() {
           <CitySelector currentCity={selectedCity} onCityChange={handleCityChange} />
 
           {/* ── AI Chatbot Assistant Panel ── */}
-          <ChatPanel cityConfig={cityConfig} isMobile={isMobile} activeTab={activeTab} />
+          <ChatPanel cityConfig={cityConfig} isMobile={isMobile} activeTab={activeTab} onJourneyResult={handleJourneyResult} />
 
           {/* ── Desktop-only overlays ── */}
           {!isMobile && (

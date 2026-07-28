@@ -238,6 +238,25 @@ export function createThreeLayer(
       roof.rotation.z = trackAngle;
       group.add(roof);
 
+      // Cylindrical shade on top of the roof
+      const shadeRadius = (width * 1.05) / 2;
+      const shadeLength = length * 1.05;
+      const shadeGeo = new THREE.CylinderGeometry(shadeRadius, shadeRadius, shadeLength, 16, 1, false, 0, Math.PI);
+      shadeGeo.rotateZ(-Math.PI / 2);
+      shadeGeo.rotateX(-Math.PI / 2);
+      const shadeMat = new THREE.MeshPhongMaterial({
+        color: primaryColor,
+        emissive: primaryColor,
+        emissiveIntensity: 0.3,
+        transparent: true,
+        opacity: 0.78,
+      });
+      const shade = new THREE.Mesh(shadeGeo, shadeMat);
+      shade.position.set(coord.x, coord.y, coord.z + height / 2 + (1.2 * meterScale) / 2);
+      shade.rotation.z = trackAngle;
+      group.add(shade);
+
+
       // Support pillars
       const pillarGeo = new THREE.BoxGeometry(2.5 * meterScale, 4 * meterScale, stationAltitude * meterScale);
       const pillarMat = new THREE.MeshPhongMaterial({

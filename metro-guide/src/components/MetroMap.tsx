@@ -271,7 +271,7 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
             source: buildingSourceName,
             'source-layer': 'building',
             type: 'fill-extrusion',
-            minzoom: 13,
+            minzoom: 15, // Further increased to prevent heavy rendering lag on city-wide zooms
             paint: {
               'fill-extrusion-color': '#2d3748',
               'fill-extrusion-height': [
@@ -571,6 +571,11 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
       const selectedStyleObj = MAP_STYLES.find(s => s.id === mapStyle) || MAP_STYLES[0];
       const styleConfig = selectedStyleObj.style || selectedStyleObj.url || MAP_STYLES[0].url!;
 
+      // Maximize background workers for faster vector tile tessellation (3D buildings)
+      if (typeof window !== 'undefined' && maplibregl.setWorkerCount) {
+        maplibregl.setWorkerCount(Math.max(4, navigator.hardwareConcurrency || 4));
+      }
+
       const map = new maplibregl.Map({
         container: containerRef.current,
         style: styleConfig,
@@ -580,6 +585,8 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
         bearing: cityConfig.defaultBearing,
         antialias: true,
         maxPitch: 85,
+        fadeDuration: 0, // Performance: Disable cross-fade animations on tile load
+        crossSourceCollisions: false, // Performance: Skip collision detection across different sources
       } as any);
 
       mapRef.current = map;
