@@ -132,7 +132,7 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
       if (allCoords.length >= 2) {
         const bounds = new maplibregl.LngLatBounds();
         allCoords.forEach(c => bounds.extend(c as [number, number]));
-        map.fitBounds(bounds, { padding: 100, pitch: 60, duration: 1800 });
+        map.fitBounds(bounds, { padding: 100, pitch: 60, duration: 3500 });
       }
     }, [clearJourneyLayers]);
 
@@ -146,7 +146,7 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
           zoom: 16.5,
           pitch: 68,
           bearing: -25,
-          duration: 2000,
+          duration: 4000,
           essential: true,
         });
       },
@@ -212,7 +212,7 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
 
       const bounds = new maplibregl.LngLatBounds();
       coords.forEach(c => bounds.extend(c));
-      map.fitBounds(bounds, { padding: 120, pitch: 65, duration: 1500 });
+      map.fitBounds(bounds, { padding: 120, pitch: 65, duration: 3000 });
     }, []);
 
     // Remove existing metro layers before adding new ones
@@ -621,7 +621,7 @@ const MetroMap = forwardRef<MetroMapHandle, MetroMapProps>(
         zoom: cityConfig.defaultZoom,
         pitch: cityConfig.defaultPitch,
         bearing: cityConfig.defaultBearing,
-        duration: 2500,
+        duration: 4500,
         essential: true,
       });
 
