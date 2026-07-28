@@ -2,7 +2,7 @@
 
 # 🚇 Metro Guide — AI-Powered 3D Metro Navigation
 
-**A full-stack, AI-first metro navigation platform featuring a real-time 3D interactive map, Dijkstra-powered route planning, Gemini AI chatbot assistant, and multi-source geocoding — built for Pune Metro.**
+**A full-stack, AI-first metro navigation platform featuring a real-time 3D interactive map, Dijkstra-powered route planning, LangGraph AI chatbot with structured route cards, OSRM walking directions, multi-modal first/last mile options, and multi-source geocoding — built for Pune Metro.**
 
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -10,6 +10,7 @@
 [![Gemini](https://img.shields.io/badge/Google_Gemini-AI-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://deepmind.google/technologies/gemini/)
 [![Three.js](https://img.shields.io/badge/Three.js-0.185-000000?style=for-the-badge&logo=threedotjs&logoColor=white)](https://threejs.org)
 [![MapLibre](https://img.shields.io/badge/MapLibre_GL-5-396CB2?style=for-the-badge)](https://maplibre.org)
+[![LangGraph](https://img.shields.io/badge/LangGraph-Agent-FF6F00?style=for-the-badge)](https://langchain-ai.github.io/langgraph/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://supabase.com)
 
 </div>
@@ -23,11 +24,14 @@ Metro Guide is a **production-grade, AI-powered metro navigation web application
 ### ✨ Key Highlights
 
 - 🗺️ **Real 3D Metro Map** — MapLibre GL + Three.js custom WebGL layer renders elevated viaducts, support pillars, glowing station structures, and pulsing animated ground rings at 60 fps
-- 🧠 **Dijkstra Route Planning** — Client-side graph traversal with Haversine distance + interchange penalty, giving optimal multi-line metro paths
-- 🤖 **Gemini AI Chatbot** — Google Gemini-powered AI assistant with full conversation memory (PostgreSQL-backed), streaming SSE responses, and metro-domain system instructions
+- 🧠 **Dijkstra Route Planning** — Client-side & server-side graph traversal with Haversine distance + interchange penalty, LRU-cached for instant repeat lookups
+- 🤖 **LangGraph AI Chatbot** — Google Gemini-powered chatbot with a LangGraph StateGraph pipeline that auto-detects route queries, geocodes places, computes Dijkstra paths, and returns interactive structured route cards
+- 🚶 **OSRM Walking Directions** — Real pedestrian routing via [OSRM](https://routing.openstreetmap.de) with turn-by-turn steps and GeoJSON walking polylines rendered on the map
+- 🚗 **Multi-Modal First/Last Mile** — Each journey provides Walking, Auto/Bike/Cab, and PMPML Bus options with fare estimates for reaching and exiting metro stations
 - 📍 **Smart Geocoding** — Multi-source location search combining local station fuzzy matching + Photon (Komoot) + Nominatim (OpenStreetMap), all in parallel
-- 🏃 **Nearest Station Detection** — Haversine-based geospatial proximity search to snap user coordinates to the closest metro station
-- 📱 **Fully Responsive** — Dedicated mobile layout with bottom-sheet navigation, tab switching, and compact controls
+- 🏃 **Nearest Station Detection** — Haversine-based geospatial proximity search with LRU caching (~100m grid) to snap user coordinates to the closest metro station
+- 🚆 **Animated Train Markers** — Live-animated train icons travel along metro route coordinates at 60 fps with CSS pulse effects
+- 📱 **Fully Responsive** — Dedicated mobile layout with bottom-sheet navigation, tab switching, compact route bar, and compact controls
 
 ---
 
@@ -44,8 +48,8 @@ Metro Guide/
 │
 └── backend/              ← Python FastAPI backend
     └── app/
-        ├── api/          ← REST & SSE endpoints (chat, journey, health)
-        ├── agents/       ← AI agent definitions (metro, navigation, map, voice)
+        ├── api/          ← REST endpoints (chat, journey, health)
+        ├── langgraph_agent/ ← Graph-based AI state machine (nodes, state, graph)
         ├── services/     ← Business logic (Gemini, Journey planning, Geocoding)
         ├── db/           ← SQLAlchemy models + Supabase/PostgreSQL
         ├── memory/       ← Conversation memory persistence layer
@@ -59,9 +63,9 @@ Metro Guide/
 ```
 User Input ──► React UI ──► [Client-side Dijkstra] ──► Metro Route Overlay on MapLibre
                     │
-                    └──► FastAPI Backend ──► Gemini AI ──► SSE Stream ──► Chat Panel
-                                      └──► Journey Service ──► Haversine + Dijkstra ──► Route JSON
-                                      └──► PostgreSQL (Supabase) ──► Conversation Memory
+                    └──► FastAPI Backend ──► LangGraph Pipeline ──► Route/Chat JSON ──► Chat Panel
+                                      └──► Journey Service ──► Haversine + Dijkstra + OSRM ──► Route JSON
+                                      └──► PostgreSQL (Supabase) ──► Station Graph + Conversation Memory
 ```
 
 ---
@@ -153,6 +157,7 @@ The **client-side route planner** uses a custom implementation of [Dijkstra's Sh
 - **Interchange Detection** — scans the reconstructed path for line changes and marks those stations as interchange points
 - **Line Segment Grouping** — groups consecutive same-line stations into segments for step-by-step direction display
 - **Time Estimation** — `estimatedTime = (totalDistance / 33 km/h) × 60 + (interchanges × 5 min)`
+- **LRU Caching** — server-side route computations are cached with `@lru_cache(maxsize=256)` for instant repeat queries
 - **City-Agnostic** — accepts any `Record<string, Station>` graph, not just Pune
 
 The same Dijkstra logic is also implemented server-side in `journey_service.py`, with results enriched by AI-generated summaries.
@@ -195,19 +200,56 @@ The journey planner features a **Google Maps-style multi-source location autocom
 
 ---
 
-## 🤖 AI Integration — Google Gemini
+## 🚶 Walking Directions — OSRM (OpenStreetMap Routing)
 
-> **Package:** `google-genai@2.11`
-> **Files:** `backend/app/services/gemini_service.py`, `backend/app/api/chat.py`
+> **API:** [OSRM Demo Server](https://routing.openstreetmap.de) (free, no API key)
+> **Used in:** `backend/app/services/journey_service.py`
 
-Metro Guide integrates the **Google Gemini API** (`google-genai` SDK) for two distinct AI-powered features:
+The journey service fetches **real pedestrian walking routes** from the OSRM (Open Source Routing Machine) public API for first/last mile directions:
 
-### 1. AI Metro Chatbot (Streaming)
+| Feature | Details |
+|---|---|
+| **Endpoint** | `routing.openstreetmap.de/routed-foot/route/v1/driving/{coords}` |
+| **GeoJSON Geometry** | Full walking polyline returned for map rendering |
+| **Turn-by-Turn Steps** | Parsed from OSRM legs into `WalkingStep` objects (instruction, distance, duration) |
+| **Fallback** | If OSRM is unavailable, falls back to Haversine straight-line estimate with a 1.3× path factor |
+| **Timeout** | 5-second async timeout via `httpx.AsyncClient` |
 
-- **Endpoint:** `POST /chat/stream` (Server-Sent Events)
-- **Frontend:** `src/components/ChatPanel.tsx` reads SSE token events and renders them progressively
-- The chatbot is initialized with a **metro-domain system instruction** (`METRO_AI_SYSTEM_INSTRUCTION`) defining its persona, knowledge scope (Pune Metro), and response format
-- **Streaming pipeline:** `gemini_service.get_stream_response()` → `yield chunk.text` → `EventSourceResponse` (SSE) → `ChatPanel` token-by-token rendering
+The walking polylines are rendered on MapLibre as dashed GeoJSON line layers — green for source walking, red for destination walking.
+
+---
+
+## 🚗 Multi-Modal First/Last Mile Options
+
+> **File:** `backend/app/services/journey_service.py`
+> **Frontend:** `metro-guide/src/components/JourneyPlanner.tsx`
+
+For every planned journey, the backend computes **three transport options** for both reaching the boarding station and traveling from the exit station:
+
+| Mode | Icon | Fare Logic |
+|---|---|---|
+| **Walking** | 🚶 | Free — uses OSRM walking distance |
+| **Auto / Bike / Cab** | 🚗 | ₹25 min fare + ₹17/km (Auto) or ₹15 + ₹8/km (Bike), 22 km/h city speed |
+| **PMPML Bus / Feeder** | 🚌 | ₹10–₹15, 15 km/h average + 5 min wait/stop time |
+
+The frontend `JourneyPlanner` allows users to **switch modes per leg** (source and destination independently), and the total journey time dynamically recalculates based on the selected travel modes.
+
+---
+
+## 🤖 AI Integration — Google Gemini & LangGraph
+
+> **Packages:** `google-genai@2.11`, `langgraph`
+> **Files:** `backend/app/langgraph_agent/`, `backend/app/api/chat.py`
+
+Metro Guide integrates the **Google Gemini API** (`google-genai` SDK) alongside a **LangGraph StateGraph** for an intelligent, multi-step agent pipeline:
+
+### 1. AI Metro Chatbot (LangGraph-Powered)
+
+- **Endpoint:** `POST /chat/langgraph`
+- **Frontend:** `src/components/ChatPanel.tsx` interacts with this endpoint to receive conversational text and `structured_route` objects.
+- **Agent Pipeline:** The chatbot uses a LangGraph state machine to automatically detect route queries and process them:
+  `think` → `extract_intent` → (if route) → `geocode` → `nearest_station` → `route_planning` → `format_response`
+- **Natural Language Routing:** Users can ask "How to go from FC Road to Swargate" and the pipeline will automatically geocode the places, find the nearest stations via Haversine distance, compute the Dijkstra route, and return a map-ready interactive card.
 - **Temperature:** 0.7 | **Max tokens:** 8192
 
 ### 2. AI Journey Summary
@@ -249,13 +291,14 @@ POST /api/journey/plan  →  JourneyResult
 
 **Pipeline:**
 
-1. **Station Preloading** — on app startup, station data is loaded from PostgreSQL (Supabase) into an in-memory cache (`_station_cache`) for fast subsequent lookups
-2. **Nearest Station Detection** — Haversine scan over all stations to find closest boarding and alighting points to the user's source/destination coordinates
-3. **Dijkstra Graph Traversal** — server-side shortest path with interchange penalties (matches the client-side implementation for consistency)
-4. **Walking Segment Estimation** — calculates walking distance and time from user location to metro station using Haversine + optional [OpenRouteService](https://openrouteservice.org) API for actual walking paths
-5. **Travel Mode Options** — generates alternative mode suggestions (auto-rickshaw, cab, bus) with fare estimates for the first/last mile
-6. **AI Summary** — Gemini generates a human-friendly narrative of the computed journey
-7. **Route Coordinates** — extracts the GeoJSON line coordinate array for the map to highlight the active route
+1. **Station Preloading** — on app startup, station data and adjacency graph are loaded from PostgreSQL (Supabase) tables `metro_stations` + `metro_edges` into an in-memory cache (`_station_cache`) for instant lookups. Falls back to local JSON if DB is unavailable.
+2. **Nearest Station Detection** — LRU-cached (`maxsize=512`) Haversine scan over all stations, rounded to ~100m grid precision for cache hits
+3. **Dijkstra Graph Traversal** — LRU-cached (`maxsize=256`) server-side shortest path with interchange penalties (matches the client-side implementation for consistency)
+4. **Walking Directions** — fetches real pedestrian walking routes from **OSRM** (OpenStreetMap Routing Machine) with full GeoJSON polylines and turn-by-turn steps; falls back to Haversine × 1.3 path-factor estimate if OSRM is unavailable
+5. **Multi-Modal Travel Options** — computes Walking, Auto/Bike/Cab, and PMPML Bus options with distance, time, and fare estimates for both first and last mile
+6. **Line Direction Detection** — determines travel direction (e.g., "towards Ramwadi") based on station sequence order along each line
+7. **AI Summary** — Gemini generates a multi-modal natural-language journey summary using `JOURNEY_SUMMARY_PROMPT` with all transport options; falls back to a template-based summary if Gemini is unavailable
+8. **Route Coordinates** — extracts the GeoJSON `[lng, lat]` coordinate array for the map to highlight the active metro route
 
 ---
 
@@ -271,10 +314,15 @@ The backend is a fully async **FastAPI** application with the following endpoint
 | `GET` | `/health` | Detailed service health status |
 | `POST` | `/chat` | Single-turn Gemini AI response |
 | `POST` | `/chat/stream` | Streaming SSE chat (Server-Sent Events) |
+| `POST` | `/chat/langgraph` | LangGraph-powered route-aware intelligent chat with `structured_route` |
 | `DELETE` | `/chat/history/{session_id}` | Clear conversation history |
-| `POST` | `/api/journey/plan` | Full journey planning with AI summary |
+| `POST` | `/api/journey/plan` | Full journey planning with OSRM walking + multi-modal options + AI summary |
+| `GET` | `/api/journey/nearest?lat=&lng=&city=` | Find nearest metro station to coordinates |
+| `GET` | `/api/journey/stations/{city}` | List all metro stations for a city |
 
 **Middleware:** CORS fully open (`*`) for local development. Swap to origin-specific in production.
+
+**Dual Router Mount:** All `/chat` and `/journey` endpoints are mounted both at root (`/chat`, `/journey`) and under `/api` prefix (`/api/chat`, `/api/journey`) for flexible frontend consumption.
 
 ---
 
@@ -310,10 +358,11 @@ All iconography across the application comes from [Lucide React](https://lucide.
 - **ORM:** SQLAlchemy 2.0 with synchronous sessions via `engine.connect()`
 - **Provider:** [Supabase](https://supabase.com) PostgreSQL instance (configured via `DATABASE_URL` env var)
 - **Tables:**
-  - `metro_stations` — station records (id, name, line, latitude, longitude, facilities, connected_stations, city)
-  - `metro_connections` — adjacency list for the station graph
+  - `metro_stations` — station records (id, name, line, latitude, longitude, facilities, city)
+  - `metro_edges` — directed adjacency list for the station graph (`from_station_id`, `to_station_id`, `city`)
   - `conversation_sessions` — chat session metadata
   - `chat_messages` — individual chat message logs
+- **Startup Preloading:** On app boot (`lifespan`), station data + edges are loaded from Supabase into an in-memory cache via `preload_stations()` for zero-latency graph lookups during requests
 
 ---
 
@@ -328,8 +377,11 @@ All iconography across the application comes from [Lucide React](https://lucide.
 | **Docker / docker-compose** | Backend containerization for production deployment |
 | **python-dotenv** | Environment variable management for local dev |
 | **Pydantic v2** | Request/response schema validation in FastAPI |
+| **pydantic-settings** | Typed settings from `.env` with `SettingsConfigDict` |
 | **Tenacity** | Retry logic for external API calls (Gemini, geocoding) |
+| **httpx** | Async HTTP client for OSRM and geocoding API calls |
 | **SSE-Starlette** | Server-Sent Events support for streaming chat responses |
+| **LangGraph + LangChain Core** | StateGraph-based AI agent pipeline for route-aware chatbot |
 
 ---
 
@@ -374,6 +426,9 @@ GEMINI_MODEL=gemini-2.0-flash
 DATABASE_URL=postgresql://user:password@host:port/dbname
 APP_NAME=Metro Guide AI
 APP_VERSION=1.0.0
+HOST=0.0.0.0
+PORT=8000
+ORS_API_KEY=               # Optional: OpenRouteService API key (OSRM is used by default, no key needed)
 ```
 
 **`metro-guide/.env`**
@@ -395,7 +450,7 @@ Metro Guide/
 │   │   │   ├── MetroMap.tsx            ← MapLibre GL map + Three.js layer integration
 │   │   │   ├── ThreeLayer.ts           ← Three.js 3D metro infrastructure renderer
 │   │   │   ├── JourneyPlanner.tsx      ← Route planner UI (source → dest → results)
-│   │   │   ├── ChatPanel.tsx           ← Gemini AI streaming chat interface
+│   │   │   ├── ChatPanel.tsx           ← LangGraph AI chat + structured route cards
 │   │   │   ├── StationPanel.tsx        ← Searchable station list sidebar
 │   │   │   ├── StationDetail.tsx       ← Station info card (facilities, connections)
 │   │   │   ├── CitySelector.tsx        ← City switching dropdown
@@ -422,7 +477,7 @@ Metro Guide/
 └── backend/                            ← Backend (Python FastAPI)
     ├── app/
     │   ├── api/
-    │   │   ├── chat.py                 ← /chat + /chat/stream SSE endpoint
+    │   │   ├── chat.py                 ← /chat + /chat/langgraph endpoints
     │   │   ├── journey.py              ← /api/journey/plan endpoint
     │   │   └── health.py               ← /health endpoint
     │   │
@@ -441,12 +496,10 @@ Metro Guide/
     │   │   ├── embeddings.py           ← Text embedding generation (for RAG pipeline)
     │   │   └── vector_store.py         ← Vector store interface for semantic retrieval
     │   │
-    │   ├── agents/
-    │   │   ├── metro_agent.py          ← Metro domain AI agent
-    │   │   ├── navigation_agent.py     ← Navigation-specific agent
-    │   │   ├── map_agent.py            ← Map context agent
-    │   │   ├── voice_agent.py          ← Voice interaction agent
-    │   │   └── orchestrator.py         ← Multi-agent orchestration layer
+    │   ├── langgraph_agent/
+    │   │   ├── graph.py                ← StateGraph assembly and conditional routing
+    │   │   ├── nodes.py                ← Graph nodes (think, geocode, route_planning, etc.)
+    │   │   └── state.py                ← TypedDict for MetroChatState
     │   │
     │   ├── schemas/                    ← Pydantic models (ChatRequest, JourneyResult…)
     │   └── core/
@@ -481,6 +534,6 @@ This project is open for personal and educational use. Contact the maintainer fo
 
 **Built with ❤️ for Pune Metro commuters**
 
-*MapLibre GL · Three.js · Dijkstra · Haversine · Google Gemini · FastAPI · React · TypeScript*
+*MapLibre GL · Three.js · Dijkstra · Haversine · Google Gemini · LangGraph · OSRM · FastAPI · React · TypeScript*
 
 </div>

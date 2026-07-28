@@ -65,10 +65,10 @@ export const MAP_STYLES: MapStyleOption[] = [
     style: {
       version: 8,
       sources: {
-        'esri-terrain': {
+        'google-terrain': {
           type: 'raster',
           tiles: [
-            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'
+            'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}'
           ],
           tileSize: 256,
         },
@@ -77,7 +77,7 @@ export const MAP_STYLES: MapStyleOption[] = [
         {
           id: 'terrain-layer',
           type: 'raster',
-          source: 'esri-terrain',
+          source: 'google-terrain',
           paint: {
             'raster-opacity': 1,
           },
