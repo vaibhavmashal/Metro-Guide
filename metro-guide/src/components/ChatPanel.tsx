@@ -229,11 +229,13 @@ export default function ChatPanel({ cityConfig, isMobile = false, onJourneyResul
       distance_meters: route.source_station.distance_from_user_meters,
       duration_minutes: (route.source_station.distance_from_user_meters / 1000 / 5) * 60,
       geometry: [],
+      steps: [],
     },
     dest_walking: {
       distance_meters: route.dest_station.distance_from_user_meters,
       duration_minutes: (route.dest_station.distance_from_user_meters / 1000 / 5) * 60,
       geometry: [],
+      steps: [],
     },
     source_options: [],
     dest_options: [],

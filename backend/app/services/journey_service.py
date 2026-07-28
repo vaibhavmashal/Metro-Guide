@@ -27,6 +27,7 @@ from app.schemas.journey import (
     JourneyRequest,
     JourneyResult,
     StationInfo,
+    WalkingStep,
     WalkingSegment,
     MetroSegment,
     NearestStationResponse,
@@ -326,43 +327,76 @@ def _estimate_walking(from_lat: float, from_lng: float, to_lat: float, to_lng: f
     )
 
 
-async def _get_ors_walking(from_lat: float, from_lng: float, to_lat: float, to_lng: float) -> WalkingSegment | None:
+async def _get_osrm_walking(from_lat: float, from_lng: float, to_lat: float, to_lng: float) -> WalkingSegment | None:
     """
-    Get walking directions from OpenRouteService API.
-    Falls back to None if API key not set or request fails.
+    Get walking directions from OSRM Demo API (Free, no API key required).
+    Falls back to None if request fails.
     """
-    api_key = getattr(settings, "ORS_API_KEY", None)
-    if not api_key or api_key == "":
-        return None
-
     try:
-        url = "https://api.openrouteservice.org/v2/directions/foot-walking"
+        url = f"https://routing.openstreetmap.de/routed-foot/route/v1/driving/{from_lng},{from_lat};{to_lng},{to_lat}"
         params = {
-            "api_key": api_key,
-            "start": f"{from_lng},{from_lat}",
-            "end": f"{to_lng},{to_lat}",
+            "overview": "full",
+            "geometries": "geojson",
+            "steps": "true"
         }
+        # Using a custom user-agent as per OSRM public API policies
+        headers = {"User-Agent": "MetroSarthiApp/1.0"}
+        
         async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(url, params=params)
+            response = await client.get(url, params=params, headers=headers)
             if response.status_code != 200:
-                logger.warning(f"ORS API returned {response.status_code}")
+                logger.warning(f"OSRM API returned {response.status_code}")
                 return None
 
             data = response.json()
-            features = data.get("features", [])
-            if not features:
+            if data.get("code") != "Ok" or not data.get("routes"):
                 return None
 
-            props = features[0]["properties"]["summary"]
-            coords = features[0]["geometry"]["coordinates"]
+            route = data["routes"][0]
+            distance = route.get("distance", 0)
+            duration = route.get("duration", 0)
+            
+            coords = []
+            if "geometry" in route and "coordinates" in route["geometry"]:
+                coords = route["geometry"]["coordinates"]
+
+            parsed_steps = []
+            if "legs" in route and route["legs"]:
+                osrm_steps = route["legs"][0].get("steps", [])
+                for step in osrm_steps:
+                    maneuver = step.get("maneuver", {})
+                    m_type = maneuver.get("type", "")
+                    m_modifier = maneuver.get("modifier", "")
+                    name = step.get("name", "")
+                    
+                    # Format instruction
+                    parts = []
+                    if m_type:
+                        parts.append(m_type.replace("-", " ").capitalize())
+                    if m_modifier and m_modifier != "straight":
+                        parts.append(m_modifier.replace("-", " "))
+                    if name:
+                        parts.append(f"onto {name}")
+                    
+                    instruction = " ".join(parts) if parts else "Continue"
+                    # Fallback if empty
+                    if not instruction.strip():
+                        instruction = "Continue"
+
+                    parsed_steps.append(WalkingStep(
+                        instruction=instruction,
+                        distance_meters=round(step.get("distance", 0), 0),
+                        duration_minutes=round(step.get("duration", 0) / 60, 1)
+                    ))
 
             return WalkingSegment(
-                distance_meters=round(props["distance"], 0),
-                duration_minutes=round(props["duration"] / 60, 1),
+                distance_meters=round(distance, 0),
+                duration_minutes=round(duration / 60, 1),
                 geometry=coords,
+                steps=parsed_steps
             )
     except Exception as e:
-        logger.warning(f"ORS walking directions failed: {e}")
+        logger.warning(f"OSRM walking directions failed: {e}")
         return None
 
 
@@ -484,7 +518,7 @@ async def plan_journey(request: JourneyRequest) -> JourneyResult:
         raise ValueError(f"No metro route found between {source_station.name} and {dest_station.name}")
 
     # Step 4: Walking directions
-    source_walking_ors = await _get_ors_walking(
+    source_walking_ors = await _get_osrm_walking(
         request.source_lat, request.source_lng,
         source_station.latitude, source_station.longitude,
     )
@@ -493,7 +527,7 @@ async def plan_journey(request: JourneyRequest) -> JourneyResult:
         source_station.latitude, source_station.longitude,
     )
 
-    dest_walking_ors = await _get_ors_walking(
+    dest_walking_ors = await _get_osrm_walking(
         dest_station.latitude, dest_station.longitude,
         request.dest_lat, request.dest_lng,
     )

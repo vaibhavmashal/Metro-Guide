@@ -24,10 +24,17 @@ export interface StationInfo {
   distance_from_user_meters: number;
 }
 
+export interface WalkingStep {
+  instruction: string;
+  distance_meters: number;
+  duration_minutes: number;
+}
+
 export interface WalkingSegment {
   distance_meters: number;
   duration_minutes: number;
   geometry: number[][];
+  steps: WalkingStep[];
 }
 
 export interface MetroSegment {

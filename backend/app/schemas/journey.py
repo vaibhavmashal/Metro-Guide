@@ -25,10 +25,17 @@ class StationInfo(BaseModel):
     distance_from_user_meters: float = Field(description="Distance from user's location in meters")
 
 
+class WalkingStep(BaseModel):
+    instruction: str = Field(description="Turn-by-turn instruction, e.g. 'Turn left onto FC Road'")
+    distance_meters: float
+    duration_minutes: float
+
+
 class WalkingSegment(BaseModel):
     distance_meters: float
     duration_minutes: float
     geometry: list[list[float]] = Field(default_factory=list, description="[[lng, lat], ...] polyline")
+    steps: list[WalkingStep] = Field(default_factory=list, description="Turn-by-turn steps")
 
 
 class MetroSegment(BaseModel):

@@ -743,6 +743,7 @@ export default function JourneyPlanner({
                           subtitle={`${Math.round(srcOpt.distance_meters)}m · ${Math.round(srcOpt.duration_minutes)} min${srcOpt.fare_estimate && srcOpt.fare_estimate !== 'Free' ? ` · ${srcOpt.fare_estimate}` : ''}`}
                           lineColor="#4ade80"
                           isFirst
+                          walkingSteps={selectedSourceMode === 'walking' ? journey.source_walking.steps : undefined}
                         />
                         {journey.source_options && journey.source_options.length > 0 && (
                           <div style={{ display: 'flex', gap: '4px', paddingLeft: '32px', marginTop: '-4px', marginBottom: '6px' }}>
@@ -800,6 +801,7 @@ export default function JourneyPlanner({
                           subtitle={`${Math.round(dstOpt.distance_meters)}m · ${Math.round(dstOpt.duration_minutes)} min${dstOpt.fare_estimate && dstOpt.fare_estimate !== 'Free' ? ` · ${dstOpt.fare_estimate}` : ''}`}
                           lineColor="transparent"
                           isLast
+                          walkingSteps={selectedDestMode === 'walking' ? journey.dest_walking.steps : undefined}
                         />
                         {journey.dest_options && journey.dest_options.length > 0 && (
                           <div style={{ display: 'flex', gap: '4px', paddingLeft: '32px', marginTop: '-4px' }}>
@@ -884,6 +886,7 @@ function JourneyStep({
   isLast,
   stations,
   sourceStation,
+  walkingSteps,
 }: {
   icon: React.ReactNode;
   iconColor: string;
@@ -895,11 +898,14 @@ function JourneyStep({
   isLast?: boolean;
   stations?: string[];
   sourceStation?: string;
+  walkingSteps?: { instruction: string; distance_meters: number; duration_minutes: number; }[];
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [expandedSteps, setExpandedSteps] = useState(false);
   // Intermediate stations = all stations except the first (source) and last (exit at dest)
   const middleStations = stations && stations.length > 2 ? stations.slice(1, -1) : [];
   const hasDropdown = middleStations.length > 0;
+  const hasStepsDropdown = walkingSteps && walkingSteps.length > 0;
 
   return (
     <div style={{ display: 'flex', gap: '10px', position: 'relative', minHeight: '44px' }}>
@@ -977,7 +983,35 @@ function JourneyStep({
           </div>
         )}
 
-        <span style={{ color: '#64748b', fontSize: '11px', display: 'block', marginTop: sourceStation ? '2px' : '0' }}>
+        {/* Walking Steps toggle */}
+        {hasStepsDropdown && (
+          <div style={{ marginTop: '4px' }}>
+            <button
+              onClick={() => setExpandedSteps(v => !v)}
+              title={expandedSteps ? 'Hide directions' : 'Show directions'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '3px',
+                padding: '3px 8px', borderRadius: '6px',
+                background: expandedSteps ? `${iconColor}22` : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${expandedSteps ? iconColor + '50' : 'rgba(255,255,255,0.1)'}`,
+                color: expandedSteps ? iconColor : '#94a3b8',
+                fontSize: '11px', fontWeight: 600,
+                cursor: 'pointer', transition: 'all 0.2s',
+              }}
+            >
+              <ChevronDown
+                size={12}
+                style={{
+                  transform: expandedSteps ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.25s ease',
+                }}
+              />
+              <span>{expandedSteps ? 'Hide steps' : 'Directions'}</span>
+            </button>
+          </div>
+        )}
+
+        <span style={{ color: '#64748b', fontSize: '11px', display: 'block', marginTop: (sourceStation || hasStepsDropdown) ? '3px' : '0' }}>
           {subtitle}
         </span>
 
@@ -1015,7 +1049,6 @@ function JourneyStep({
                         : 'none',
                     }}
                   >
-                    {/* Small dot */}
                     <div style={{
                       width: '6px', height: '6px', borderRadius: '50%',
                       background: iconColor, opacity: 0.55, flexShrink: 0,
@@ -1032,6 +1065,58 @@ function JourneyStep({
                     }}>
                       #{idx + 1}
                     </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Expandable walking steps */}
+        <AnimatePresence>
+          {expandedSteps && hasStepsDropdown && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.22, ease: 'easeInOut' }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div style={{
+                marginTop: '8px',
+                marginLeft: '4px',
+                padding: '8px 12px',
+                borderRadius: '10px',
+                background: `${iconColor}08`,
+                border: `1px solid ${iconColor}25`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+              }}>
+                {walkingSteps!.map((step, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                      padding: '4px 0',
+                      borderBottom: idx < walkingSteps!.length - 1
+                        ? `1px solid ${iconColor}18`
+                        : 'none',
+                    }}
+                  >
+                    <div style={{ marginTop: '2px', color: iconColor, opacity: 0.8 }}>
+                      {step.instruction.toLowerCase().includes('left') ? '↰' : step.instruction.toLowerCase().includes('right') ? '↱' : '↑'}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '11.5px', color: '#e2e8f0', fontWeight: 500 }}>
+                        {step.instruction}
+                      </span>
+                      <span style={{ fontSize: '10px', color: '#64748b' }}>
+                        {step.distance_meters}m
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
