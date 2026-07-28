@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
@@ -45,9 +45,13 @@ app.add_middleware(
 
 app.include_router(health_router)
 app.include_router(chat_router)
-app.include_router(chat_router, prefix="/api")
 app.include_router(journey_router)
-app.include_router(journey_router, prefix="/api")
+
+# Create an explicit /api prefix router to avoid router duplication issues
+api_router = APIRouter(prefix="/api")
+api_router.include_router(chat_router)
+api_router.include_router(journey_router)
+app.include_router(api_router)
 
 
 @app.get("/")
