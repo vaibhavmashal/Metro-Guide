@@ -89,7 +89,8 @@ async def delete_chat_history(session_id: str, db: Session = Depends(get_db)):
 
 # ── LangGraph Route-Aware Chatbot ─────────────────────────────────────
 
-@router.post("/langgraph", response_model=ChatResponse)
+@router.post("/langgraph", response_model=ChatResponse, name="chat_langgraph")
+@router.post("/langgraph/", response_model=ChatResponse, include_in_schema=False)
 async def chat_langgraph_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
     """
     LangGraph-powered chatbot endpoint with route planning intelligence.

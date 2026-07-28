@@ -23,6 +23,16 @@ async def lifespan(app: FastAPI):
         logger.info("Database tables initialized successfully.")
         # Preload stations and route graph from Supabase DB on startup
         preload_stations("pune")
+
+        # Log all registered routes for debugging 404 issues
+        logger.info("--- REGISTERED ROUTES ---")
+        for route in app.routes:
+            methods = getattr(route, 'methods', None)
+            path = getattr(route, 'path', None)
+            name = getattr(route, 'name', None)
+            if path:
+                logger.info(f"Route: {methods} {path} (name: {name})")
+        logger.info("-------------------------")
     except Exception as e:
         logger.warning(f"Could not connect to PostgreSQL or initialize tables: {e}")
     yield
