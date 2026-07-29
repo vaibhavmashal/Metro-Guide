@@ -36,7 +36,7 @@ type MobileTab = 'map' | 'stations' | 'journey';
 function App() {
   const [selectedCity, setSelectedCity] = useState<CityId>('pune');
   const [isLoading, setIsLoading]       = useState(true);
-  const [mapStyle, setMapStyle]         = useState('terrain');
+  const [mapStyle, setMapStyle]         = useState('dark');
   const [settings, setSettings]         = useState<SceneSettings>({ ...DEFAULT_SCENE_SETTINGS });
   const [is3DTerrain, setIs3DTerrain]   = useState(false);
   const [selectedStation, setSelectedStation] = useState<string | null>(null);
