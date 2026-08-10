@@ -1,11 +1,17 @@
+import logging
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.gemini_service import gemini_service
 from app.core.config import settings
+from app.core.prompts import SAFE_DEFLECTION_RESPONSE
 from app.db.database import get_db
 from app.memory.conversion import ConversationMemory
+from app.middleware.prompt_guard import sanitize_user_input, validate_response
 from sse_starlette.sse import EventSourceResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/chat",
@@ -17,11 +23,29 @@ router = APIRouter(
 @router.post("/", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
     session_id = request.session_id or "default_session"
+
+    # ── Layer 1: Input sanitization ────────────────────────────────
+    _, was_flagged, threat_category = sanitize_user_input(request.message)
+    if was_flagged:
+        logger.warning(
+            f"Prompt injection blocked | endpoint=chat | category={threat_category} | "
+            f"session={session_id} | message_preview={request.message[:60]}..."
+        )
+        # Save the attempt to conversation memory for audit trail
+        ConversationMemory.add_message(db, session_id, role="user", content=request.message)
+        ConversationMemory.add_message(db, session_id, role="model", content=SAFE_DEFLECTION_RESPONSE)
+        return ChatResponse(
+            success=True,
+            response=SAFE_DEFLECTION_RESPONSE,
+            model=settings.GEMINI_MODEL,
+            thinking_process="Processed query via Metro AI assistant with conversation memory."
+        )
+
     try:
         # Load past conversation history formatted for Gemini
         history = ConversationMemory.get_gemini_history(db, session_id)
 
-        # Generate reply using Gemini
+        # Generate reply using Gemini (response validation happens inside gemini_service)
         reply = gemini_service.generate_response(request.message, history=history)
 
         # Save user message & model reply to database conversation memory
@@ -51,6 +75,22 @@ async def chat_stream_endpoint(request: ChatRequest, db: Session = Depends(get_d
     """
     session_id = request.session_id or "default_session"
 
+    # ── Layer 1: Input sanitization ────────────────────────────────
+    _, was_flagged, threat_category = sanitize_user_input(request.message)
+    if was_flagged:
+        logger.warning(
+            f"Prompt injection blocked | endpoint=chat/stream | category={threat_category} | "
+            f"session={session_id} | message_preview={request.message[:60]}..."
+        )
+        ConversationMemory.add_message(db, session_id, role="user", content=request.message)
+        ConversationMemory.add_message(db, session_id, role="model", content=SAFE_DEFLECTION_RESPONSE)
+
+        def blocked_generator():
+            yield {"event": "token", "data": SAFE_DEFLECTION_RESPONSE}
+            yield {"event": "done", "data": "completed"}
+
+        return EventSourceResponse(blocked_generator())
+
     def event_generator():
         try:
             yield {"event": "status", "data": "Processing query with Metro AI..."}
@@ -66,10 +106,21 @@ async def chat_stream_endpoint(request: ChatRequest, db: Session = Depends(get_d
                 full_reply.append(chunk)
                 yield {"event": "token", "data": chunk}
 
-            # Store full bot message once streaming completes
+            # ── Layer 2: Output validation on accumulated response ─
             complete_text = "".join(full_reply)
             if complete_text:
-                ConversationMemory.add_message(db, session_id, role="model", content=complete_text)
+                validated_text, was_redacted = validate_response(complete_text, SAFE_DEFLECTION_RESPONSE)
+                if was_redacted:
+                    logger.critical(
+                        f"Stream response redacted due to prompt leak | "
+                        f"session={session_id} | original_length={len(complete_text)}"
+                    )
+                    # Note: chunks were already sent. We log this as critical
+                    # and save the safe version. In a future iteration, consider
+                    # buffering chunks before sending for full validation.
+                    ConversationMemory.add_message(db, session_id, role="model", content=validated_text)
+                else:
+                    ConversationMemory.add_message(db, session_id, role="model", content=complete_text)
 
             yield {"event": "done", "data": "completed"}
         except Exception as e:
@@ -97,7 +148,7 @@ async def chat_langgraph_endpoint(request: ChatRequest, db: Session = Depends(ge
 
     Pipeline:
       think → extract_intent → [geocode → nearest_station → route_planning → format_response]
-                             → [general_chat]
+                               → [general_chat]
 
     - Detects route queries automatically from natural language
     - Geocodes place names using Photon + Nominatim (free, no API key)
@@ -106,6 +157,23 @@ async def chat_langgraph_endpoint(request: ChatRequest, db: Session = Depends(ge
     - Returns structured_route for frontend map rendering
     """
     session_id = request.session_id or "default_session"
+
+    # ── Layer 1: Input sanitization ────────────────────────────────
+    _, was_flagged, threat_category = sanitize_user_input(request.message)
+    if was_flagged:
+        logger.warning(
+            f"Prompt injection blocked | endpoint=chat/langgraph | category={threat_category} | "
+            f"session={session_id} | message_preview={request.message[:60]}..."
+        )
+        ConversationMemory.add_message(db, session_id, role="user", content=request.message)
+        ConversationMemory.add_message(db, session_id, role="model", content=SAFE_DEFLECTION_RESPONSE)
+        return ChatResponse(
+            success=True,
+            response=SAFE_DEFLECTION_RESPONSE,
+            model=settings.GEMINI_MODEL,
+            thinking_process="Processed via Metro AI assistant.",
+            structured_route=None,
+        )
 
     try:
         from app.langgraph_agent import metro_graph, MetroChatState
@@ -164,7 +232,6 @@ async def chat_langgraph_endpoint(request: ChatRequest, db: Session = Depends(ge
         )
 
     except Exception as e:
-        import logging
         logging.getLogger(__name__).error(f"LangGraph endpoint error: {e}", exc_info=True)
         return ChatResponse(
             success=False,
